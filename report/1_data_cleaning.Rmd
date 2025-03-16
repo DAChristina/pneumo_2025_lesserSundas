@@ -20,16 +20,16 @@ pacman::p_load(reactable, tidyverse, plotly)
 
 ### 1.1. Metadata
 
-1.  DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa).xlsx: An Excel file separated by sheets for every region (focused on Lombok and Sumbawa, but also including Manado and Papua). Within the excel file there are information about ongoing WGS preparation for troublematic samples (the "need confirmation" sheets)
-2.  Data WGS_Lombok.xlsx: An information storage for in silico WGS results for Lombok samples (Sumbawa is not available yet)
+1.  **DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa).xlsx**: An Excel file separated by sheets for every region (focused on Lombok and Sumbawa, but also including Manado and Papua). Within the excel file there are information about ongoing WGS preparation for troublematic samples (the "need confirmation" sheets)
+2.  **Data WGS_Lombok.xlsx**: An information storage for in silico WGS results for Lombok samples (Sumbawa is not available yet)
 
 ### 1.2. Fasta data
 
-325 files of WGS stored in \*.fasta format (including the metadata) were shared to me at 11 March 2025, consisting of 189 Lombok files and 136 Sumbawa files. Unfortunately, I have found 49 files with naming inconsistencies—these files are not match to their SPECIMEN ID in metadata.
+324 files of WGS stored in \*.fasta format (including the metadata) were shared to me at 11 March 2025, consisting of 189 Lombok files and 135 Sumbawa files. Unfortunately, I have found 49 files with naming inconsistencies—these files are not match to their SPECIMEN ID in metadata.
 
 ```{r}
 knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-12 11-40-20.png")
 knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-12 11-24-47.png")
 ```
 
-I copy these files in a separated folder, then perform a manual rename by adding underscore ("\_") between region code (LBK OR SWQ) and ID number.
+I copy these files in a separated folder, then perform a rename by adding underscore ("\_") between region code (LBK OR SWQ) and ID number.
