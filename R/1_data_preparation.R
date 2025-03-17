@@ -2,36 +2,47 @@ library(tidyverse)
 library(readxl)
 source("global/fun.R")
 
-df_epi_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa).xlsx",
+df_epi_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver2.xlsx",
                                  sheet = "Lombok") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub(" ", "_", SPECIMEN_ID),
                 area = "Lombok",
                 across(where(is.character), ~ na_if(., "N/A")),
-                across(where(is.character), ~ if_else(. == "-", "tidak", .)),
+                across(where(is.character), ~ if_else(. == "-", "tidak", .)))
                 # across(everything(), as.character),
-                across(everything(), tolower)) %>% 
-  dplyr::select(-contains("koding"),-contains("Ya="))
+                # across(everything(), tolower)) %>% 
+  # dplyr::select(-contains("koding"),-contains("Ya="))
 
 write.csv(df_epi_lombok, "raw_data/temporary_df_epi_lombok.csv",
           row.names = F)
 
-df_epi_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa).xlsx",
+df_epi_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver2.xlsx",
                                     sheet = "Sumbawa") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub("-", "_", SPECIMEN_ID),
                 area = "Sumbawa",
                 across(where(is.character), ~ na_if(., "N/A")),
-                across(where(is.character), ~ if_else(. == "-", "tidak", .)),
+                across(where(is.character), ~ if_else(. == "-", "tidak", .)))
                 # across(everything(), as.character),
-                across(everything(), tolower)) %>% 
-  dplyr::select(-contains("koding"),-contains("Ya="))
+                # across(everything(), tolower)) %>% 
+  # dplyr::select(-contains("koding"),-contains("Ya="))
 
 write.csv(df_epi_sumbawa, "raw_data/temporary_df_epi_sumbawa.csv",
           row.names = F)
 
 setdiff(names(df_epi_lombok), names(df_epi_sumbawa))
 setdiff(names(df_epi_sumbawa), names(df_epi_lombok))
+
+# In the end, I manually merge Lombok & Sumbawa dfs (column differences occur)
+# Do not trust coded columns.
+
+df_epi_merged <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row.csv")
+
+
+
+
+
+
 
 
 # pending
@@ -55,7 +66,26 @@ df_epi_ls_summarise <- df_epi_ls %>%
 
 view(t(df_epi_ls_summarise))
 
-# Select columns
+
+# Data picking framework for analysis
+# Priority columns
+df_combined_epi_priority <- dplyr::bind_rows(
+  df_epi_lombok %>% 
+    dplyr::select(2:15, # laboratory data
+                  16:18,20,22,23, # identitas anak
+                  25,27,29, # ASI
+                  
+                  area)
+  ,
+  df_epi_sumbawa %>% 
+    dplyr::select(2:15, # laboratory data
+                  16:18,20,22,23, # identitas anak
+                  25,27,29, # ASI
+                  
+                  area)
+)
+
+
 
 
 
@@ -64,13 +94,13 @@ view(t(df_epi_ls_summarise))
 
 
 # test available fasta
-df_confirm_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa).xlsx",
+df_confirm_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver2.xlsx",
                                         sheet = "need confirmation-lombok") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub(" ", "_", SPECIMEN_ID),
                 area = "Lombok")
 
-df_confirm_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa).xlsx",
+df_confirm_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver2.xlsx",
                                          sheet = "need confirmation-sumbawa_DC_ed") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub(" ", "_", SPECIMEN_ID),

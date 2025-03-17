@@ -23,6 +23,14 @@ pacman::p_load(reactable, tidyverse, plotly)
 1.  **DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa).xlsx**: An Excel file separated by sheets for every region (focused on Lombok and Sumbawa, but also including Manado and Papua). Within the excel file there are information about ongoing WGS preparation for troublematic samples (the "need confirmation" sheets)
 2.  **Data WGS_Lombok.xlsx**: An information storage for in silico WGS results for Lombok samples (Sumbawa is not available yet)
 
+I found "frameshift mutation" in dataframe Lombok (possibly because WGS data are updated but previous WGS data were still denoted as "N/A"). I cleaned up the data directly from google sheet on 17 March 2025. I re-download the data and conduct data cleaning analyses.
+
+```{R}
+knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-17 12-41-09.png")
+
+
+```
+
 ### 1.2. Fasta data
 
 324 files of WGS stored in \*.fasta format (including the metadata) were shared to me at 11 March 2025, consisting of 189 Lombok files and 135 Sumbawa files. Unfortunately, I have found 49 files with naming inconsistencies—these files are not match to their SPECIMEN ID in metadata.
