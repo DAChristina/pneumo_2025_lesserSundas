@@ -13,6 +13,19 @@ df_epi_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (M
                 # across(everything(), tolower)) %>% 
   # dplyr::select(-contains("koding"),-contains("Ya="))
 
+# Detect duplicated IDs
+df_epi_lombok_duplicated_ids <- df_epi_lombok %>% 
+  dplyr::count(SPECIMEN_ID) %>% 
+  dplyr::filter(SPECIMEN_ID > 1) %>% 
+  dplyr::mutate(category = case_when(
+    n == 2 ~ "Duplicated",
+    n == 3 ~ "Triplicated",
+    n == 4 ~ "Quadruplicated",
+    n > 4 ~ "More than Quadruplicated"
+  )) %>% 
+  view()
+
+
 write.csv(df_epi_lombok, "raw_data/temporary_df_epi_lombok.csv",
           row.names = F)
 
@@ -27,6 +40,18 @@ df_epi_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (
                 # across(everything(), tolower)) %>% 
   # dplyr::select(-contains("koding"),-contains("Ya="))
 
+# Detect duplicated IDs
+df_epi_sumbawa_duplicated_ids <- df_epi_sumbawa %>% 
+  dplyr::count(SPECIMEN_ID) %>% 
+  dplyr::filter(SPECIMEN_ID > 1) %>% 
+  dplyr::mutate(category = case_when(
+    n == 2 ~ "Duplicated",
+    n == 3 ~ "Triplicated",
+    n == 4 ~ "Quadruplicated",
+    n > 4 ~ "More than Quadruplicated"
+  )) %>% 
+  view()
+
 write.csv(df_epi_sumbawa, "raw_data/temporary_df_epi_sumbawa.csv",
           row.names = F)
 
@@ -36,12 +61,73 @@ setdiff(names(df_epi_sumbawa), names(df_epi_lombok))
 # In the end, I manually merge Lombok & Sumbawa dfs (column differences occur)
 # Do not trust coded columns.
 
-df_epi_merged <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row.csv")
+df_epi_merged <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row.csv") %>% 
+  dplyr::select(-contains(c("kode_", "Kode_", "koding_","Koding_"))) %>% 
+  dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x)))
 
+# Test weird unique value
+lapply(df_epi_merged, unique)
+df_epi_merged_summarise <- df_epi_merged %>% 
+  dplyr::summarise(across(everything(), ~ list(table(.)))) %>% 
+  tidyr::pivot_longer(everything(), names_to = "variable", values_to = "value") %>% 
+  view()
 
-
-
-
+# I conducted manual data cleaning for inputted values
+# then, pick some interesting columns to be analysed
+df_epi_clean <- df_epi_merged %>% 
+  dplyr::select(specimen_id, s_pneumoniae_suspect_culture_colony,
+                optochin, s_pneumoniae_culture_result, serotype_wgs, # Will be modified to VTs and NVTs
+                age_month, # Will be modified soon and classified according to some ageGroups
+                jenis_kelamin, suku,
+                apakah_anak_tersebut_pernah_diberi_asi,
+                jika_ya_apakah_anak_tersebut_masih_diberi_asi,
+                tidak_termasuk_anak_tersebut_berapa_orang_yang_tinggal_1_rumah_dengan_anak_tersebut, # I change "-" to NA
+                kecuali_anak_tersebut_berapa_anak_berusia_5_tahun_yang_tinggal_serumah_dengan_anak_tersebut,
+                jumlah_anak_berusia_1_tahun_yang_tinggal_serumah, # <1 will change "-", or "tidak" to 0
+                jumlah_anak_berusia_antara_1_sampai_dengan_2_tahun_yang_tinggal_serumah, # 1<2, will change "-", or "tidak" to 0
+                jumlah_anak_berusia_24_tahun_yang_tinggal_serumah, # 2-4 will change "-", or "tidak" to 0; 2 IDs with "1, 5 tahun" is changed to "1"
+                kecuali_anak_tersebut_berapa_anak_yang_berusia_5_tahun_yang_tidur_dalam_1_kamar_dengan_anak_tersebut, # <5 will change "-", or "tidak" to 0
+                apakah_anak_pergi_ke_sekolah_taman_kanakkanak_playgroup_pendidikan_anak_usia_dini_ppa_pendidikan_pengembangan_anak_sekolah_minggu_atau_tempat_penitipan_anak_dengan_peserta_lebih_dari_5_orang_anak_lain,
+                apakah_anak_tersebut_menghabiskan_setidaknya_1_hari_dalam_seminggu_bergaulberdekatan_dengan_anak_lain_yang_berusia_5_tahun_yang_tidak_tinggal_serumah_dengan_anak_tersebut,
+                apakah_di_dalam_rumah_ada_yang_merokok_di_depan_anak,
+                
+                # pending data clarification
+                atap_rumah_terbuat_dari, # is "gaiteng" a typographical error of "genteng" (5) or beton (3)
+                # pending data clarification
+                
+                bangunan_rumah_terbuat_dari,
+                tipe_jendela_rumah__tertutup_dengan,
+                sumber_bahan_bakar_untuk_memasak,
+                dimana_biasanya_anda_memasak,
+                apakah_anak_tersebut_pernah_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini,
+                berapa_kali_anak_tersebut_dirawat_inap_dalam_3_bulan_terakhir_ini_____kali_dirawat_di_rumah_sakit, # what is "H" and "="? I changed those to "0"
+                sakit_di_derita_anak_yang_mengharuskan_anak_di_rawat_inap, # I corrected many variations of "pneumonia" such as "pneuminia" and "pneumoni"
+                
+                # Specified to sickness
+                apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_pneumonia,
+                apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_diare,
+                
+                tidak_termasuk_rawat_inap_di_rumah_sakit_apakah_anak_tersebut_mengunjungi_fasilitas_kesehatan_klinik_rumah_sakit_puskesmas_dalam_3_bulan_terakhir_ini,
+                jika_ya_berapa_jika_0_isi_,
+                alasan_anak_mengunjungi_fasilitas_kesehatan,
+                apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_batuk,
+                apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_diare,
+                apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_ruam,
+                apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_lainlain,
+                apakah_anak_sedangpernah_mengalami_demam_dalam_3_hari_terakhir_ini,
+                jika_ya_berapa_hari_anak_tersebut_mengalami_demam_jika_tidak_isi_, # review needed
+                
+                # Sickness in past 24h
+                dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami, # review needed
+                
+                # Antibiotic usage
+                apakah_anak_tersebut_pernah_diberi_obat_antibiotik_3_hari_terakhir_ini,
+                apakah_anak_tersebut_pernah_diberi_obat_antibiotik_1_bulan_terakhir_ini,
+                
+                # Vaccination
+                sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib,
+                sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd
+                )
 
 
 
@@ -57,7 +143,6 @@ df_epi_ls <- dplyr::bind_rows(df_epi_lombok #%>%
                                 
 # Test weird unique value
 lapply(df_epi_ls, unique)
-
 sapply(df_epi_ls, unique)
 
 df_epi_ls_summarise <- df_epi_ls %>% 
