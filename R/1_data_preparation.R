@@ -76,7 +76,8 @@ df_epi_merged_summarise <- df_epi_merged %>%
 # then, pick some interesting columns to be analysed
 df_epi_clean <- df_epi_merged %>% 
   dplyr::select(specimen_id, s_pneumoniae_suspect_culture_colony,
-                optochin, s_pneumoniae_culture_result, serotype_wgs, # Will be modified to VTs and NVTs
+                optochin, s_pneumoniae_culture_result, wgs_result11, wgs_result12,
+                serotype_wgs, # Will be modified to VTs and NVTs
                 age_month, # Will be modified soon and classified according to some ageGroups
                 area,
                 jenis_kelamin, suku,
@@ -128,9 +129,83 @@ df_epi_clean <- df_epi_merged %>%
                 # Vaccination
                 sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib,
                 sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd
-                )
+                ) %>% 
+  dplyr::mutate(
+    final_pneumo_decision = case_when(
+      wgs_result12 == "streptococcus pneumoniae" ~ "positive",
+      # optochin == "s" | optochin == "?" ~ "positive",
+      optochin == "?" ~ "positive",
+      optochin == "r" ~ "negative", # correct notes result based on optochin & culture result
+      s_pneumoniae_culture_result == "neg" ~ "negative",
+      s_pneumoniae_suspect_culture_colony == "yes" & s_pneumoniae_culture_result == "pos" & wgs_result12 == "streptococcus pneumoniae" ~ "positive",
+      s_pneumoniae_suspect_culture_colony == "yes" & s_pneumoniae_culture_result == "pos" & wgs_result12 != "streptococcus pneumoniae" ~ "negative",  # OR "Failed_to_be_extracted"?
+      s_pneumoniae_suspect_culture_colony == "yes" & wgs_result12 != "streptococcus pneumoniae" ~ "negative",  # OR "Failed_to_be_extracted"?
+      TRUE ~ s_pneumoniae_culture_result
+    ),
+    final_pneumo_decision = case_when(
+      final_pneumo_decision == "neg" ~ "negative",
+      is.na(final_pneumo_decision) ~ "negative",
+      TRUE ~ final_pneumo_decision  # Ensure other values remain unchanged
+    )
+  ) %>% 
+  # correct final_pneumo_decision
+  dplyr::mutate(
+    final_pneumo_decision = case_when(
+      final_pneumo_decision == "pos" ~ "positive",
+      TRUE ~ final_pneumo_decision
+    ))
   
+# Demo viz
+df_epi_clean_grouped <- df_epi_clean %>% 
+  group_by(sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd, final_pneumo_decision) %>% 
+  summarise(count = n()) %>% 
+  # view() %>% 
+  glimpse()
+
+ggplot(df_epi_clean_grouped, aes_string(fill = 'final_pneumo_decision', y = 'count', x = "sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd")) + 
+  geom_bar(position = 'fill', stat = 'identity') + # stack or fill
+  labs(title = paste("Stacked Barplot of")) + 
+  theme_bw()
+
+
+
+
+
+# Trial visualisations (boxplot of counts and percentage) simple y = final_pneumo_decision x = columns
+df_epi_clean$final_pneumo_decision <- factor(df_epi_clean$final_pneumo_decision, levels = c('negative', 'positive'))
+column_names <- setdiff(names(df_epi_clean), 'final_pneumo_decision')
+
+# Position = stack
+lapply(column_names, function(column) {
+  df_summary <- df_epi_clean %>% 
+    group_by(!!sym(column), final_pneumo_decision) %>%  # Use !!sym(column) to reference column
+    summarise(count = n(), .groups = "drop") 
   
+  filename <- paste0("barplot_stack_", column, ".png")
+  file_path <- file.path("pictures/", paste0(filename))
+  
+  png(file = file_path, width = 800, height = 600)
+  ggplot(df_summary, aes(x = !!sym(column), y = count, fill = final_pneumo_decision)) + 
+    geom_bar(position = 'stack', stat = 'identity') + 
+    labs(title = paste("Stacked Barplot of", column)) + 
+    theme_bw()
+  
+  dev.off()
+})
+
+# Position = fill
+lapply(column_names, function(column) {
+  filename <- paste0("barplot_fill", column, ".png")
+  file_path <- file.path("pictures/", paste0(filename))
+  
+  png(file = file_path, width = 800, height = 600)
+  ggplot(df_epi_clean, aes_string(fill = 'final_pneumo_decision', y = 'final_pneumo_decision', x = column)) + 
+    geom_bar(position = 'fill', stat = 'identity') + 
+    labs(title = paste("Stacked + Percent Barplot of", column)) + 
+    theme_minimal()
+  
+  dev.off()
+})
 
 
 
@@ -257,6 +332,7 @@ df_epi_test <- read.csv("report/temporary_available_fasta_list_in_DC.csv") %>%
       TRUE ~ final_pneumo_decision  # Ensure other values remain unchanged
     )
   ) %>% 
+  # correct final_pneumo_decision
   dplyr::mutate(
     final_pneumo_decision = case_when(
       final_pneumo_decision == "pos" ~ "positive",
@@ -275,6 +351,9 @@ non_pneumo_fasta <- df_epi_test %>%
 
 write.table(non_pneumo_fasta, "raw_data/test_non_pneumo_fasta.txt",
             row.names = F, col.names = F, quote = F)
+# notes: Streptococcus_pneumoniae_SWQ_049.fasta is not denoted as pneumo in column wgs_result12,
+# I re-analyse the file in pathogenWatch & add the fasta as pneumo in temporary_df_epi_lombok_sumbawa_manual_combine_row.csv
+
 
 # Quick viz serotypes
 # Compute percentage
