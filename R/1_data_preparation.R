@@ -78,6 +78,7 @@ df_epi_clean <- df_epi_merged %>%
   dplyr::select(specimen_id, s_pneumoniae_suspect_culture_colony,
                 optochin, s_pneumoniae_culture_result, serotype_wgs, # Will be modified to VTs and NVTs
                 age_month, # Will be modified soon and classified according to some ageGroups
+                area,
                 jenis_kelamin, suku,
                 apakah_anak_tersebut_pernah_diberi_asi,
                 jika_ya_apakah_anak_tersebut_masih_diberi_asi,
@@ -128,6 +129,8 @@ df_epi_clean <- df_epi_merged %>%
                 sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib,
                 sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd
                 )
+  
+  
 
 
 
@@ -154,21 +157,6 @@ view(t(df_epi_ls_summarise))
 
 # Data picking framework for analysis
 # Priority columns
-df_combined_epi_priority <- dplyr::bind_rows(
-  df_epi_lombok %>% 
-    dplyr::select(2:15, # laboratory data
-                  16:18,20,22,23, # identitas anak
-                  25,27,29, # ASI
-                  
-                  area)
-  ,
-  df_epi_sumbawa %>% 
-    dplyr::select(2:15, # laboratory data
-                  16:18,20,22,23, # identitas anak
-                  25,27,29, # ASI
-                  
-                  area)
-)
 
 
 
@@ -213,6 +201,20 @@ df_epi_test <- dplyr::bind_rows(
                    ) %>% 
   view()
 
+# Use merged data to analyse accepted samples
+df_epi_test <- df_epi_merged %>% 
+  dplyr::select(2:12, area) %>% 
+  dplyr::left_join(read.table("raw_data/test_available_fasta_renamed.txt", header = FALSE) %>% 
+                     dplyr::mutate(file_check = "accepted_by_dc",
+                                   specimen_id = gsub("Streptococcus_pneumoniae_", "", V1),
+                                   specimen_id = gsub(".fasta", "", specimen_id),
+                                   fasta_name = V1) %>% 
+                     dplyr::select(-V1)
+                   ,
+                   by = "specimen_id"
+  ) %>% 
+  view()
+
 area_report <- df_epi_test %>% 
   dplyr::group_by(area, file_check) %>% 
   dplyr::summarise(count = n()) %>% 
@@ -221,7 +223,7 @@ area_report <- df_epi_test %>%
 
 # further report
 area_suspect_report <- df_epi_test %>% 
-  dplyr::group_by(area, S._pneumoniae_suspect_culture_colony, S._pneumoniae_culture_result, file_check) %>% 
+  dplyr::group_by(area, s_pneumoniae_suspect_culture_colony, s_pneumoniae_culture_result, file_check) %>% 
   dplyr::summarise(count = n()) %>% 
   dplyr::ungroup() %>% 
   view()
@@ -239,17 +241,40 @@ writexl::write_xlsx(list(Sheet1 = df_epi_test,
 df_epi_test <- read.csv("report/temporary_available_fasta_list_in_DC.csv") %>% 
   dplyr::mutate(
     final_pneumo_decision = case_when(
-      WGS_Result...11 == "Streptococcus pneumoniae" ~ "Positive",
-      S._pneumoniae_suspect_culture_colony == "Yes" & S._pneumoniae_culture_result == "Pos" & WGS_Result...11 == "Streptococcus pneumoniae" ~ "Positive",
-      S._pneumoniae_suspect_culture_colony == "Yes" & S._pneumoniae_culture_result == "Pos" & WGS_Result...11 != "Streptococcus pneumoniae" ~ "Negative",  # OR "Failed_to_be_extracted"?
-      TRUE ~ S._pneumoniae_culture_result
+      wgs_result12 == "streptococcus pneumoniae" ~ "positive",
+      # optochin == "s" | optochin == "?" ~ "positive",
+      optochin == "?" ~ "positive",
+      optochin == "r" ~ "negative", # correct notes result based on optochin & culture result
+      s_pneumoniae_culture_result == "neg" ~ "negative",
+      s_pneumoniae_suspect_culture_colony == "yes" & s_pneumoniae_culture_result == "pos" & wgs_result12 == "streptococcus pneumoniae" ~ "positive",
+      s_pneumoniae_suspect_culture_colony == "yes" & s_pneumoniae_culture_result == "pos" & wgs_result12 != "streptococcus pneumoniae" ~ "negative",  # OR "Failed_to_be_extracted"?
+      s_pneumoniae_suspect_culture_colony == "yes" & wgs_result12 != "streptococcus pneumoniae" ~ "negative",  # OR "Failed_to_be_extracted"?
+      TRUE ~ s_pneumoniae_culture_result
     ),
     final_pneumo_decision = case_when(
-      final_pneumo_decision == "Neg" ~ "Negative",
-      is.na(final_pneumo_decision) ~ "Negative",
+      final_pneumo_decision == "neg" ~ "negative",
+      is.na(final_pneumo_decision) ~ "negative",
       TRUE ~ final_pneumo_decision  # Ensure other values remain unchanged
     )
-  )
+  ) %>% 
+  dplyr::mutate(
+    final_pneumo_decision = case_when(
+      final_pneumo_decision == "pos" ~ "positive",
+      TRUE ~ final_pneumo_decision
+  )) %>% 
+  dplyr::select(-wgs_shipment_date) %>% 
+  view()
+
+# Isolate non-pneumo data for fasta removal
+non_pneumo_fasta <- df_epi_test %>% 
+  dplyr::filter(file_check == "accepted_by_dc") %>% 
+  dplyr::filter(wgs_result12 != "streptococcus pneumoniae" | is.na(wgs_result12)) %>% 
+  dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta/", fasta_name)) %>% 
+  dplyr::select(fasta_name) %>% 
+  view()
+
+write.table(non_pneumo_fasta, "raw_data/test_non_pneumo_fasta.txt",
+            row.names = F, col.names = F, quote = F)
 
 # Quick viz serotypes
 # Compute percentage
