@@ -85,10 +85,10 @@ df_epi_clean <- df_epi_merged %>%
                 jika_ya_apakah_anak_tersebut_masih_diberi_asi,
                 tidak_termasuk_anak_tersebut_berapa_orang_yang_tinggal_1_rumah_dengan_anak_tersebut, # I change "-" to NA
                 kecuali_anak_tersebut_berapa_anak_berusia_5_tahun_yang_tinggal_serumah_dengan_anak_tersebut,
-                jumlah_anak_berusia_1_tahun_yang_tinggal_serumah, # <1 will change "-", or "tidak" to 0
-                jumlah_anak_berusia_antara_1_sampai_dengan_2_tahun_yang_tinggal_serumah, # 1<2, will change "-", or "tidak" to 0
-                jumlah_anak_berusia_24_tahun_yang_tinggal_serumah, # 2-4 will change "-", or "tidak" to 0; 2 IDs with "1, 5 tahun" is changed to "1"
-                kecuali_anak_tersebut_berapa_anak_yang_berusia_5_tahun_yang_tidur_dalam_1_kamar_dengan_anak_tersebut, # <5 will change "-", or "tidak" to 0
+                jumlah_anak_berusia_1_tahun_yang_tinggal_serumah, # <1 I change "-", or "tidak" to 0
+                jumlah_anak_berusia_antara_1_sampai_dengan_2_tahun_yang_tinggal_serumah, # 1<2, I change "-", or "tidak" to 0
+                jumlah_anak_berusia_24_tahun_yang_tinggal_serumah, # 2-4 I change "-", or "tidak" to 0; 2 IDs with "1, 5 tahun" is changed to "1"
+                kecuali_anak_tersebut_berapa_anak_yang_berusia_5_tahun_yang_tidur_dalam_1_kamar_dengan_anak_tersebut, # <5 I change "-", or "tidak" to 0
                 apakah_anak_pergi_ke_sekolah_taman_kanakkanak_playgroup_pendidikan_anak_usia_dini_ppa_pendidikan_pengembangan_anak_sekolah_minggu_atau_tempat_penitipan_anak_dengan_peserta_lebih_dari_5_orang_anak_lain,
                 apakah_anak_tersebut_menghabiskan_setidaknya_1_hari_dalam_seminggu_bergaulberdekatan_dengan_anak_lain_yang_berusia_5_tahun_yang_tidak_tinggal_serumah_dengan_anak_tersebut,
                 apakah_di_dalam_rumah_ada_yang_merokok_di_depan_anak,
@@ -102,7 +102,7 @@ df_epi_clean <- df_epi_merged %>%
                 sumber_bahan_bakar_untuk_memasak,
                 dimana_biasanya_anda_memasak,
                 apakah_anak_tersebut_pernah_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini,
-                berapa_kali_anak_tersebut_dirawat_inap_dalam_3_bulan_terakhir_ini_____kali_dirawat_di_rumah_sakit, # what is "H" and "="? I changed those to "0"
+                berapa_kali_anak_tersebut_dirawat_inap_dalam_3_bulan_terakhir_ini_____kali_dirawat_di_rumah_sakit, # what is "H" and "="? I change those to "0"
                 sakit_di_derita_anak_yang_mengharuskan_anak_di_rawat_inap, # I corrected many variations of "pneumonia" such as "pneuminia" and "pneumoni"
                 
                 # Specified to sickness
@@ -153,7 +153,44 @@ df_epi_clean <- df_epi_merged %>%
     final_pneumo_decision = case_when(
       final_pneumo_decision == "pos" ~ "positive",
       TRUE ~ final_pneumo_decision
-    ))
+    )) %>% 
+  dplyr::mutate(
+    # generate age classification
+    age_year = case_when(
+      age_month < 13 ~ 1,
+      age_month >= 13 & age_month < 25 ~ 2,
+      age_month >= 25 & age_month < 37 ~ 3,
+      age_month >= 37 & age_month < 49 ~ 4,
+      age_month >= 49 & age_month < 61 ~ 5
+    ),
+    age_year_2groups = case_when(
+      age_year == 1 ~ "1 and below",
+      age_year >= 2 ~ "more than 1"
+    ),
+    # generate VTs and NVTs according to PCV13
+    serotype_wgs = toupper(serotype_wgs),
+    serotype_classification_PCV13 = case_when(
+      serotype_wgs %in% c("1", "3", "4", "5", "6A", "6B", "7F", 
+                          "9V", "14", "18C", "19A", "19F", "23F") ~ "VT",
+      serotype_wgs == "UNTYPABLE" ~ "UNTYPABLE",
+      !is.na(serotype_wgs) ~ "NVT",
+      TRUE ~ NA_character_
+    )
+  )
+
+# Grouping vaccination test
+df_epi_clean_grouped <- df_epi_clean %>% 
+  group_by(sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd, age_year_2groups, final_pneumo_decision, serotype_classification_PCV13) %>% 
+  summarise(count = n()) %>% 
+  view() %>% 
+  glimpse()
+
+# Selecting final pneumo decision
+df_epi_clean_pneumo_decision <- df_epi_clean %>% 
+  select(s_pneumoniae_suspect_culture_colony, optochin,
+         s_pneumoniae_culture_result, wgs_result12,
+         final_pneumo_decision) %>% 
+  view()
   
 # Demo viz
 df_epi_clean_grouped <- df_epi_clean %>% 
@@ -162,50 +199,64 @@ df_epi_clean_grouped <- df_epi_clean %>%
   # view() %>% 
   glimpse()
 
-ggplot(df_epi_clean_grouped, aes_string(fill = 'final_pneumo_decision', y = 'count', x = "sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd")) + 
+ggplot(df_epi_clean_grouped, 
+       aes_string(y = 'count', x = "sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd",
+                  fill = 'final_pneumo_decision')) + 
   geom_bar(position = 'fill', stat = 'identity') + # stack or fill
   labs(title = paste("Stacked Barplot of")) + 
-  theme_bw()
+  # theme(legend.position="none") +
+  # geom_boxplot(show.legend = FALSE) +
+  theme_bw() +
+  theme(legend.position="none")
 
 
 
 
 
 # Trial visualisations (boxplot of counts and percentage) simple y = final_pneumo_decision x = columns
-df_epi_clean$final_pneumo_decision <- factor(df_epi_clean$final_pneumo_decision, levels = c('negative', 'positive'))
+# df_epi_clean$final_pneumo_decision <- factor(df_epi_clean$final_pneumo_decision, levels = c('negative', 'positive'))
 column_names <- setdiff(names(df_epi_clean), 'final_pneumo_decision')
 
-# Position = stack
-lapply(column_names, function(column) {
+for (column in column_names){
   df_summary <- df_epi_clean %>% 
     group_by(!!sym(column), final_pneumo_decision) %>%  # Use !!sym(column) to reference column
-    summarise(count = n(), .groups = "drop") 
+    summarise(count = n(), .groups = "drop")
   
-  filename <- paste0("barplot_stack_", column, ".png")
-  file_path <- file.path("pictures/", paste0(filename))
+  f_name <- paste0("barplot_", column, ".png")
+  f_path <- file.path("pictures/descriptive", paste0(f_name))
   
-  png(file = file_path, width = 800, height = 600)
-  ggplot(df_summary, aes(x = !!sym(column), y = count, fill = final_pneumo_decision)) + 
-    geom_bar(position = 'stack', stat = 'identity') + 
-    labs(title = paste("Stacked Barplot of", column)) + 
-    theme_bw()
+  # Position = stack
+  plot_stack <- ggplot(df_summary,
+                       aes(x = !!sym(column), y = count,
+                           fill = final_pneumo_decision)) + 
+    geom_bar(position = "stack", stat = "identity") + 
+    labs(y = "Count",
+         x = "") + 
+    theme_bw() +
+    theme(legend.position="none")
   
+  # Position = fill
+  plot_fill <- ggplot(df_summary,
+                      aes(x = !!sym(column), y = count,
+                          fill = final_pneumo_decision)) + 
+    geom_bar(position = "fill", stat = "identity") + 
+    labs(y = "Proportion",
+         x = "") + 
+    theme_bw() +
+    theme(legend.position="none")
+  
+  # legend <- cowplot::get_legend(plot_stack)
+  
+  # Cowplot
+  png(file = f_path, width = 30, height = 12, unit = "cm", res = 600)
+  print(
+    cowplot::plot_grid(plot_stack, plot_fill,
+                       ncol = 2,
+                       labels = c("A", "B"))
+  )
   dev.off()
-})
+}
 
-# Position = fill
-lapply(column_names, function(column) {
-  filename <- paste0("barplot_fill", column, ".png")
-  file_path <- file.path("pictures/", paste0(filename))
-  
-  png(file = file_path, width = 800, height = 600)
-  ggplot(df_epi_clean, aes_string(fill = 'final_pneumo_decision', y = 'final_pneumo_decision', x = column)) + 
-    geom_bar(position = 'fill', stat = 'identity') + 
-    labs(title = paste("Stacked + Percent Barplot of", column)) + 
-    theme_minimal()
-  
-  dev.off()
-})
 
 
 
@@ -357,12 +408,13 @@ write.table(non_pneumo_fasta, "raw_data/test_non_pneumo_fasta.txt",
 
 # Quick viz serotypes
 # Compute percentage
-df_serotype_summary <- df_epi_test %>% 
-  dplyr::filter(!is.na(SEROTYPE_.WGS.)) %>% 
-  dplyr::count(SEROTYPE_.WGS.) %>%
+df_serotype_summary <- df_epi_clean %>% 
+  dplyr::filter(!is.na(serotype_wgs)) %>% 
+  dplyr::count(serotype_wgs) %>%
   dplyr::mutate(Percentage = n / sum(n) * 100)
 
-ggplot(df_serotype_summary, aes(x = SEROTYPE_.WGS., y = Percentage, fill = SEROTYPE_.WGS.)) +
+ggplot(df_serotype_summary, aes(x = serotype_wgs, y = Percentage,
+                                fill = serotype_wgs)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
@@ -372,21 +424,25 @@ ggplot(df_serotype_summary, aes(x = SEROTYPE_.WGS., y = Percentage, fill = SEROT
   theme(legend.position = "none")
 
 # Compute percentage by area
-df_serotype_area_summary <- df_epi_test %>% 
-  dplyr::filter(!is.na(SEROTYPE_.WGS.)) %>% 
-  dplyr::group_by(area, SEROTYPE_.WGS.) %>%
+df_serotype_area_summary <- df_epi_clean %>% 
+  dplyr::filter(!is.na(serotype_wgs)) %>% 
+  dplyr::group_by(area, serotype_classification_PCV13, serotype_wgs) %>%
   dplyr::summarise(Count = n(), .groups = "drop") %>%
-  dplyr::mutate(Percentage = Count / sum(Count) * 100)
+  dplyr::mutate(Percentage = Count / sum(Count) * 100,
+                serotype_classification_PCV13 = factor(serotype_classification_PCV13,
+                                                       levels = c("UNTYPABLE",
+                                                                  "VT", "NVT")))
 
-ggplot(df_serotype_area_summary, aes(x = SEROTYPE_.WGS., y = Percentage, fill = SEROTYPE_.WGS.)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
+ggplot(df_serotype_area_summary, aes(x = serotype_wgs, y = Percentage,
+                                     fill = area)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   labs(x = "Category", y = "Percentage", 
        title = "All Serotypes") +
   theme_bw() +
-  theme(legend.position = "none") +
-  facet_wrap(~ area)
+  theme(legend.position = "bottom") +
+  facet_wrap(~ serotype_classification_PCV13, nrow = 3)
 
 # right_join to see undetected 49 fasta files
 df_epi_test_right_join <- dplyr::bind_rows(
