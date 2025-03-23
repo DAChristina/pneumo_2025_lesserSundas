@@ -25,7 +25,6 @@ df_epi_lombok_duplicated_ids <- df_epi_lombok %>%
   )) %>% 
   view()
 
-
 write.csv(df_epi_lombok, "raw_data/temporary_df_epi_lombok.csv",
           row.names = F)
 
@@ -58,12 +57,24 @@ write.csv(df_epi_sumbawa, "raw_data/temporary_df_epi_sumbawa.csv",
 setdiff(names(df_epi_lombok), names(df_epi_sumbawa))
 setdiff(names(df_epi_sumbawa), names(df_epi_lombok))
 
-# In the end, I manually merge Lombok & Sumbawa dfs (column differences occur)
-# Do not trust coded columns.
+# In the end, I manually merge Lombok & Sumbawa dfs
+# Column differences occur with various values including shifted columns
+# Do not trust coded columns & the "how many vaccination" columns.
+# I can't trust n vaccination columns because there are date columns available;
+# I manually corrected n vaccination calculations.
 
+# I manually inspect NA values based on data types (numeric & categorical)
+# and many aspects from different columns.
+# 2 NAs in "tidak_termasuk_anak_tersebut_berapa_orang_yang_tinggal_1_rumah_dengan_anak_tersebut" is filled with median/mode = 3
+# 1 NA in "jika_ya_berapa_jika_0_isi_" (healthcare visit); "0" ommited and filled with median/mode = 1 because child is considered sick (batuk)
+
+# Cleaned data is stored in temporary_df_epi_lombok_sumbawa_manual_combine_row.csv:
 df_epi_merged <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row.csv") %>% 
-  dplyr::select(-contains(c("kode_", "Kode_", "koding_","Koding_"))) %>% 
-  dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x)))
+  dplyr::select(-contains(c("kode_", "Kode_", "koding_","Koding_"))) %>%
+  dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
+  dplyr::mutate(across(everything(), ~ ifelse(. == "ya", "yes", 
+                                              ifelse(. == "tidak", "no",
+                                                     ifelse(. == "tidak tahu", "unknown", .)))))
 
 # Test weird unique value
 lapply(df_epi_merged, unique)
@@ -76,14 +87,14 @@ df_epi_merged_summarise <- df_epi_merged %>%
 # then, pick some interesting columns to be analysed
 df_epi_clean <- df_epi_merged %>% 
   dplyr::select(specimen_id, s_pneumoniae_suspect_culture_colony,
-                optochin, s_pneumoniae_culture_result, wgs_result11, wgs_result12,
-                serotype_wgs, # Will be modified to VTs and NVTs
-                age_month, # Will be modified soon and classified according to some ageGroups
+                optochin, s_pneumoniae_culture_result, wgs_result12,
+                serotype_wgs, # will be modified to VTs and NVTs
+                age_month, # will be modified soon and classified according to some ageGroups
                 area,
-                jenis_kelamin, suku,
+                jenis_kelamin, suku, # based on the coded value, samawa == sumbawa (10)
                 apakah_anak_tersebut_pernah_diberi_asi,
                 jika_ya_apakah_anak_tersebut_masih_diberi_asi,
-                tidak_termasuk_anak_tersebut_berapa_orang_yang_tinggal_1_rumah_dengan_anak_tersebut, # I change "-" to NA
+                tidak_termasuk_anak_tersebut_berapa_orang_yang_tinggal_1_rumah_dengan_anak_tersebut, # I change "-" to NA, then filled with median/mode = 3
                 kecuali_anak_tersebut_berapa_anak_berusia_5_tahun_yang_tinggal_serumah_dengan_anak_tersebut,
                 jumlah_anak_berusia_1_tahun_yang_tinggal_serumah, # <1 I change "-", or "tidak" to 0
                 jumlah_anak_berusia_antara_1_sampai_dengan_2_tahun_yang_tinggal_serumah, # 1<2, I change "-", or "tidak" to 0
@@ -105,35 +116,35 @@ df_epi_clean <- df_epi_merged %>%
                 berapa_kali_anak_tersebut_dirawat_inap_dalam_3_bulan_terakhir_ini_____kali_dirawat_di_rumah_sakit, # what is "H" and "="? I change those to "0"
                 sakit_di_derita_anak_yang_mengharuskan_anak_di_rawat_inap, # I corrected many variations of "pneumonia" such as "pneuminia" and "pneumoni"
                 
-                # Specified to sickness
+                # specified to sickness
                 apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_pneumonia,
                 apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_diare,
                 
                 tidak_termasuk_rawat_inap_di_rumah_sakit_apakah_anak_tersebut_mengunjungi_fasilitas_kesehatan_klinik_rumah_sakit_puskesmas_dalam_3_bulan_terakhir_ini,
-                jika_ya_berapa_jika_0_isi_,
+                jika_ya_berapa_jika_0_isi_, # 1 NA filled with median/mode = 1; child is considered sick (batuk)
                 alasan_anak_mengunjungi_fasilitas_kesehatan,
                 apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_batuk,
                 apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_diare,
                 apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_ruam,
                 apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_lainlain,
                 apakah_anak_sedangpernah_mengalami_demam_dalam_3_hari_terakhir_ini,
-                jika_ya_berapa_hari_anak_tersebut_mengalami_demam_jika_tidak_isi_, # review needed
+                jika_ya_berapa_hari_anak_tersebut_mengalami_demam_jika_tidak_isi_, # review needed, too many categorical values; I change "-" as 0
                 
-                # Sickness in past 24h
+                # sickness in past 24h
                 dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami, # review needed
                 
-                # Antibiotic usage
+                # antibiotic usage
                 apakah_anak_tersebut_pernah_diberi_obat_antibiotik_3_hari_terakhir_ini,
                 apakah_anak_tersebut_pernah_diberi_obat_antibiotik_1_bulan_terakhir_ini,
                 
-                # Vaccination
-                sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib,
-                sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd
+                # vaccination
+                sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib, # I can't trust the calculations, I inspect n from dates
+                sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd # I can't trust the calculations, I inspect n from dates
                 ) %>% 
   dplyr::mutate(
     final_pneumo_decision = case_when(
       wgs_result12 == "streptococcus pneumoniae" ~ "positive",
-      # optochin == "s" | optochin == "?" ~ "positive",
+      # optochin == "s" | optochin == "?" ~ "positive", # "s" can be negative based on WGS result
       optochin == "?" ~ "positive",
       optochin == "r" ~ "negative", # correct notes result based on optochin & culture result
       s_pneumoniae_culture_result == "neg" ~ "negative",
@@ -145,7 +156,7 @@ df_epi_clean <- df_epi_merged %>%
     final_pneumo_decision = case_when(
       final_pneumo_decision == "neg" ~ "negative",
       is.na(final_pneumo_decision) ~ "negative",
-      TRUE ~ final_pneumo_decision  # Ensure other values remain unchanged
+      TRUE ~ final_pneumo_decision  # ensure other values remain unchanged
     )
   ) %>% 
   # correct final_pneumo_decision
@@ -176,7 +187,358 @@ df_epi_clean <- df_epi_merged %>%
       !is.na(serotype_wgs) ~ "NVT",
       TRUE ~ NA_character_
     )
+  ) %>% 
+  # rename epiData
+  dplyr::rename(
+    sex = jenis_kelamin,
+    tribe = suku,
+    workLab_culture_suspect = s_pneumoniae_suspect_culture_colony,
+    workLab_culture_result = s_pneumoniae_culture_result,
+    workLab_optochin = optochin,
+    workWGS_species = wgs_result12,
+    workWGS_serotype = serotype_wgs,
+    workWGS_serotype_classification_PCV13 = serotype_classification_PCV13,
+    breastMilk_given = apakah_anak_tersebut_pernah_diberi_asi,
+    breastMilk_still_being_given = jika_ya_apakah_anak_tersebut_masih_diberi_asi,
+    nTotal_people = tidak_termasuk_anak_tersebut_berapa_orang_yang_tinggal_1_rumah_dengan_anak_tersebut,
+    nTotal_child_5yo_andBelow = kecuali_anak_tersebut_berapa_anak_berusia_5_tahun_yang_tinggal_serumah_dengan_anak_tersebut,
+    n_child_1yo_andBelow = jumlah_anak_berusia_1_tahun_yang_tinggal_serumah,
+    n_child_1to2yo = jumlah_anak_berusia_antara_1_sampai_dengan_2_tahun_yang_tinggal_serumah,
+    n_child_2to4yo = jumlah_anak_berusia_24_tahun_yang_tinggal_serumah,
+    nTotal_child_5yo_andBelow_sleep = kecuali_anak_tersebut_berapa_anak_yang_berusia_5_tahun_yang_tidur_dalam_1_kamar_dengan_anak_tersebut,
+    contact_kindergarten = apakah_anak_pergi_ke_sekolah_taman_kanakkanak_playgroup_pendidikan_anak_usia_dini_ppa_pendidikan_pengembangan_anak_sekolah_minggu_atau_tempat_penitipan_anak_dengan_peserta_lebih_dari_5_orang_anak_lain,
+    contact_otherChildren = apakah_anak_tersebut_menghabiskan_setidaknya_1_hari_dalam_seminggu_bergaulberdekatan_dengan_anak_lain_yang_berusia_5_tahun_yang_tidak_tinggal_serumah_dengan_anak_tersebut,
+    contact_cigarettes = apakah_di_dalam_rumah_ada_yang_merokok_di_depan_anak,
+    house_roof = atap_rumah_terbuat_dari,
+    house_building = bangunan_rumah_terbuat_dari,
+    house_window = tipe_jendela_rumah__tertutup_dengan,
+    contact_cooking_fuel = sumber_bahan_bakar_untuk_memasak,
+    contact_cooking_place = dimana_biasanya_anda_memasak,
+    hospitalised_last_3mo = apakah_anak_tersebut_pernah_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini,
+    hospitalised_last_3mo_n = berapa_kali_anak_tersebut_dirawat_inap_dalam_3_bulan_terakhir_ini_____kali_dirawat_di_rumah_sakit,
+    hospitalised_last_3mo_sickness = sakit_di_derita_anak_yang_mengharuskan_anak_di_rawat_inap,
+    hospitalised_last_3mo_sickness_pneumonia = apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_pneumonia,
+    hospitalised_last_3mo_sickness_diarrhoea = apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_diare,
+    healthcareVisit_last_3mo = tidak_termasuk_rawat_inap_di_rumah_sakit_apakah_anak_tersebut_mengunjungi_fasilitas_kesehatan_klinik_rumah_sakit_puskesmas_dalam_3_bulan_terakhir_ini,
+    healthcareVisit_last_3mo_n = jika_ya_berapa_jika_0_isi_,
+    healthcareVisit_last_3mo_reason = alasan_anak_mengunjungi_fasilitas_kesehatan,
+    healthcareVisit_last_3mo_reason_cough = apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_batuk,
+    healthcareVisit_last_3mo_reason_diarrhoea = apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_diare,
+    healthcareVisit_last_3mo_reason_rash = apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_ruam,
+    healthcareVisit_last_3mo_reason_others = apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_lainlain,
+    sickness_past3days_fever = apakah_anak_sedangpernah_mengalami_demam_dalam_3_hari_terakhir_ini,
+    sickness_past3days_fever_howManyDays = jika_ya_berapa_hari_anak_tersebut_mengalami_demam_jika_tidak_isi_,
+    sickness_past24h = dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami,
+    antibiotic_past3days = apakah_anak_tersebut_pernah_diberi_obat_antibiotik_3_hari_terakhir_ini,
+    antibiotic_past1mo = apakah_anak_tersebut_pernah_diberi_obat_antibiotik_1_bulan_terakhir_ini,
+    vaccination_hibpentavalent_n = sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib,
+    vaccination_pcv13_n = sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd
+  ) %>% 
+  # combine to available fasta
+  dplyr::left_join(read.table("raw_data/test_available_fasta_renamed.txt", header = FALSE) %>% 
+                     dplyr::mutate(workFasta_check = "Accepted_by_DC",
+                                   workFasta_name = gsub(".fasta", "", V1),
+                                   specimen_id = gsub("Streptococcus_pneumoniae_", "", workFasta_name),
+                                   workFasta_name_with_extension = V1) %>% 
+                     dplyr::select(-V1)
+                   ,
+                   by = "specimen_id"
   )
+
+write.csv(df_epi_clean, "raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned.csv")
+
+# Generate numerically-coded values just to mimic the original survey result
+# And modify columns into numeric or factor
+df_epi_clean <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned.csv")
+
+df_epi_coded <- df_epi_clean %>% 
+  dplyr::mutate(
+    coded_sex = case_when(
+      sex == "laki-laki" ~ 1,
+      sex == "perempuan" ~ 2,
+      TRUE ~ NA_real_
+      ),
+    coded_tribe = case_when(
+      tribe == "sasak" ~ 2,
+      tribe == "bali" ~ 3,
+      tribe == "sumbawa" ~ 10,
+      TRUE ~ NA_real_
+    ),
+    coded_breastMilk_given = case_when(
+      breastMilk_given == "yes" ~ 1,
+      breastMilk_given == "no" ~ 2,
+      TRUE ~ NA_real_
+    ),
+    coded_breastMilk_still_being_given = case_when(
+      breastMilk_still_being_given == "yes" ~ 1,
+      breastMilk_still_being_given == "no" ~ 2,
+      TRUE ~ NA_real_
+    ),
+    coded_contact_kindergarten = case_when(
+      contact_kindergarten == "yes" ~ 1,
+      contact_kindergarten == "no" ~ 2,
+      TRUE ~ NA_real_
+    ),
+    coded_contact_otherChildren = case_when(
+      contact_otherChildren == "yes" ~ 1,
+      contact_otherChildren == "no" ~ 2,
+      TRUE ~ NA_real_
+    ),
+    coded_contact_cigarettes = case_when(
+      contact_cigarettes == "yes" ~ 1,
+      contact_cigarettes == "no" ~ 2,
+      TRUE ~ NA_real_
+    ),
+    coded_contact_cooking_fuel = case_when(
+      contact_cooking_fuel == "lpg/gas alam" ~ 1,
+      contact_cooking_fuel == "kayu" ~ 2,
+      contact_cooking_fuel == "minyak tanah" ~ 3,
+      TRUE ~ NA_real_
+    ),
+    coded_contact_cooking_place = case_when(
+      contact_cooking_place == "di dalam rumah" ~ 1,
+      contact_cooking_place == "di luar rumah" ~ 2,
+      TRUE ~ NA_real_
+    ),
+    coded_house_roof = case_when(
+      house_roof == "seng" ~ 1,
+      house_roof %in% c("asbes", "batako") ~ 2,
+      house_roof == "beton" ~ 3,
+      house_roof == "kayu" ~ 4,
+      house_roof %in% c("genteng", "genteng logam") ~ 5,
+      house_roof == "spandek" ~ 6,
+      house_roof %in% c("jerami", "daun palem", "lain-lain") ~ 7,
+      TRUE ~ NA_real_
+    ),
+    coded_house_building = case_when(
+      house_building == "batu bata" ~ 1,
+      house_building == "kayu" ~ 2,
+      house_building %in% c("bambu", "anyaman bambu") ~ 3,
+      house_building == "triplek" ~ 4,
+      house_building == "batako" ~ 5,
+      house_building == "batu" ~ 6,
+      TRUE ~ NA_real_
+    ),
+    coded_house_window = case_when(
+      house_window == "kaca/tirai" ~ 1,
+      house_window == "kayu" ~ 2,
+      house_window == "bambu" ~ 3,
+      house_window == "tidak ada/terbuka" ~ 4,
+      TRUE ~ NA_real_
+    ),
+    coded_hospitalised_last_3mo = case_when(
+      hospitalised_last_3mo == "yes" ~ 1,
+      hospitalised_last_3mo == "no" ~ 2,
+      hospitalised_last_3mo == "unknown" ~ 3,
+      TRUE ~ NA_real_
+    ),
+    coded_healthcareVisit_last_3mo = case_when(
+      healthcareVisit_last_3mo == "yes" ~ 1,
+      healthcareVisit_last_3mo == "no" ~ 2,
+      TRUE ~ NA_real_
+    ),
+    coded_sickness_past3days_fever = case_when(
+      sickness_past3days_fever == "yes" ~ 1,
+      sickness_past3days_fever == "no" ~ 2,
+      sickness_past3days_fever == "unknown" ~ 3,
+      TRUE ~ NA_real_
+    ),
+    coded_antibiotic_past3days = case_when(
+      antibiotic_past3days == "yes" ~ 1,
+      antibiotic_past3days == "no" ~ 2,
+      antibiotic_past3days == "unknown" ~ 3,
+      TRUE ~ NA_real_
+    ),
+    coded_vaccination_hibpentavalent_n = case_when(
+      vaccination_hibpentavalent_n == 4 ~ 1,
+      vaccination_hibpentavalent_n == 3 ~ 2,
+      vaccination_hibpentavalent_n == 2 ~ 3,
+      vaccination_hibpentavalent_n == 1 ~ 4,
+      vaccination_hibpentavalent_n == 0 ~ 5,
+      TRUE ~ NA_real_
+    ),
+    coded_vaccination_pcv13_n = case_when(
+      vaccination_pcv13_n == 4 ~ 1,
+      vaccination_pcv13_n == 3 ~ 2,
+      vaccination_pcv13_n == 2 ~ 3,
+      vaccination_pcv13_n == 1 ~ 4,
+      vaccination_pcv13_n == 0 ~ 5,
+      TRUE ~ NA_real_
+    ),
+    coded_final_pneumo_decision = case_when(
+      final_pneumo_decision == "positive" ~ 1,
+      final_pneumo_decision == "negative" ~ 2,
+      TRUE ~ NA_real_
+    ),
+    coded_area = case_when(
+      area == "lombok" ~ 1,
+      area == "sumbawa" ~ 2,
+      TRUE ~ NA_real_
+    )
+  ) %>% 
+  # conduct corrections for supposedly NUMERICAL and FACTOR (not ordered) columns!
+  dplyr::mutate(
+    age_month = as.numeric(age_month),
+    age_year = as.numeric(age_year),
+    nTotal_people = as.numeric(nTotal_people),
+    nTotal_child_5yo_andBelow = as.numeric(nTotal_child_5yo_andBelow),
+    n_child_1yo_andBelow = as.numeric(n_child_1yo_andBelow),
+    n_child_1to2yo = as.numeric(n_child_1to2yo),
+    n_child_2to4yo = as.numeric(n_child_2to4yo),
+    nTotal_child_5yo_andBelow_sleep = as.numeric(nTotal_child_5yo_andBelow_sleep),
+    hospitalised_last_3mo_n = as.numeric(hospitalised_last_3mo_n),
+    healthcareVisit_last_3mo_n = as.numeric(healthcareVisit_last_3mo_n), # 1 "unknown" is replaced as NA
+    # healthcareVisit_last_3mo_n = dplyr::na_if(healthcareVisit_last_3mo_n, "unknown")
+    area = as.factor(area),
+    sex = as.factor(sex),
+    tribe = as.factor(tribe),
+    breastMilk_given = as.factor(breastMilk_given),
+    breastMilk_still_being_given = as.factor(breastMilk_still_being_given),
+    contact_kindergarten = as.factor(contact_kindergarten),
+    contact_otherChildren = as.factor(contact_otherChildren),
+    contact_cigarettes = as.factor(contact_cigarettes),
+    contact_cooking_fuel = as.factor(contact_cooking_fuel),
+    contact_cooking_place = as.factor(contact_cooking_place),
+    house_building = as.factor(house_building),
+    house_roof = as.factor(house_roof),
+    house_window = as.factor(house_window),
+    hospitalised_last_3mo = as.factor(hospitalised_last_3mo),
+    healthcareVisit_last_3mo = as.factor(healthcareVisit_last_3mo),
+    sickness_past3days_fever = as.factor(sickness_past3days_fever),
+    antibiotic_past3days = as.factor(antibiotic_past3days),
+    antibiotic_past1mo = as.factor(antibiotic_past1mo),
+    age_year_2groups = factor(age_year_2groups,
+                                 levels = c("1 and below", "more than 1")),
+    final_pneumo_decision = factor(final_pneumo_decision,
+                                      levels = c("negative", "positive"))
+  )
+
+# check columns with NA
+cols_with_na <- colnames(df_epi_coded)[colSums(is.na(df_epi_coded)) > 0]
+cols_with_na_sums <- df_epi_coded %>%
+  dplyr::summarise(across(everything(), ~ sum(is.na(.)))) %>% 
+  # transpose
+  tidyr::pivot_longer(everything(),
+                      names_to = "columns", values_to = "NAs") %>% 
+  dplyr::filter(!str_detect(columns, "work"),
+                NAs != 0)
+view(cols_with_na_sums)
+
+get_mmm <- function(x) {
+  mea_v <- mean(x, na.rm = TRUE)
+  med_v <- median(x, na.rm = TRUE)
+  
+  uniq_x <- unique(na.omit(x))
+  mod_v <- uniq_x[which.max(tabulate(match(x, uniq_x)))]
+  
+  return(list(mean = mea_v,
+              median = med_v,
+              mode = mod_v))
+  }
+
+# Crucial columns with NA:
+# nTotal_people (1)
+get_mmm(df_epi_coded$nTotal_people)
+# healthcareVisit_last_3mo_n (2)
+filtered_0 <- df_epi_coded %>% 
+  dplyr::filter(healthcareVisit_last_3mo_n != 0)
+get_mmm(filtered_0$healthcareVisit_last_3mo_n)
+
+write.csv(df_epi_coded, "raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned_coded.csv")
+
+
+# Test epiFunction ehehe
+# try OR report works only for categorical data
+df_epi_coded_chars <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned_coded.csv") %>% 
+  dplyr::select(where(~ !all(is.na(.))), # NAs in workLab, workFasta & not interesting columns
+                -sickness_past3days_fever_howManyDays, # conflicted values with fever column
+                -contains("coded_"),
+                -X, -specimen_id)
+
+or_matrix_all <- generate_or_matrix_report(df_input = df_epi_coded_chars,
+                                           binary_disease = "final_pneumo_decision")
+
+or_matrix_table_report <- dplyr::full_join(
+  purrr::imap_dfr(or_matrix_all, ~{
+    df <- .x$measure
+    if (is.null(df)) return(NULL)
+    
+    df %>%
+      as.data.frame() %>%
+      dplyr::mutate(aspect = .y, category = rownames(df)) %>%
+      dplyr::relocate(aspect, category) # Moves to first columns
+  }),
+  purrr::imap_dfr(or_matrix_all, ~{
+    df <- .x$p.value
+    if (is.null(df)) return(NULL)
+    
+    df %>%
+      as.data.frame() %>%
+      dplyr::mutate(aspect = .y, category = rownames(df)) %>%
+      dplyr::relocate(aspect, category)
+  }),
+  by = c("aspect", "category")
+) %>% 
+  dplyr::mutate(
+    significance = case_when(
+      midp.exact < 0.05 | fisher.exact < 0.05 | chi.square < 0.05 ~ "occur",
+      !is.na(midp.exact) & !is.na(fisher.exact) & !is.na(chi.square) ~ "not occur",
+      TRUE ~ NA_character_
+    )) %>% 
+  dplyr::select(aspect, category, estimate, lower, upper, 
+                midp.exact, fisher.exact, chi.square, significance)
+
+
+  
+
+# try glm OR report
+or_logistic_all <- generate_glm_logistic_report(df_input = df_epi_coded_chars,
+                                                binary_disease = "final_pneumo_decision")
+
+or_logistic_model_report <- purrr::imap_dfr(or_logistic_all, ~{
+  model <- .x$model
+  coefficients_df <- broom::tidy(model) %>%
+    mutate(aspect = .y) %>%
+    rename(category = term)
+  
+  model_stats <- dplyr::tibble(
+    aspect = .y,
+    null_deviance = model$null.deviance,
+    residual_deviance = model$deviance,
+    df_null = model$df.null,
+    df_residual = model$df.residual,
+    AIC = model$aic
+  )
+  
+  # Combine everything into one table
+  dplyr::left_join(coefficients_df, model_stats, by = "aspect")
+}) %>% 
+  dplyr::mutate(OR = exp(estimate), # estimate is log(OR)
+                OR_lower_CI = exp(estimate - 1.96 * std.error),
+                OR_upper_CI = exp(estimate + 1.96 * std.error),
+                significance = case_when(
+                  p.value < 0.05 ~ "occur",
+                  !is.na(p.value) ~ "not occur",
+                  TRUE ~ NA_character_)
+  ) %>% 
+  dplyr::arrange(aspect) %>% 
+  dplyr::select(aspect, category, estimate, std.error,
+                OR, OR_lower_CI, OR_upper_CI,
+                statistic, p.value, significance,
+                null_deviance, residual_deviance, df_null, df_residual, AIC)
+
+
+# try glm multivariable OR report
+or_multivariable_all <- generate_glm_multivariable_report(df_input = df_epi_coded_chars, binary_disease = "final_pneumo_decision")
+
+
+
+# Analyse genomic data
+genome <- readxl::read_excel("raw_data/Data WGS_Lombok.xlsx")
+
+
+
+
 
 # Grouping vaccination test
 df_epi_clean_grouped <- df_epi_clean %>% 
@@ -215,47 +577,7 @@ ggplot(df_epi_clean_grouped,
 
 # Trial visualisations (boxplot of counts and percentage) simple y = final_pneumo_decision x = columns
 # df_epi_clean$final_pneumo_decision <- factor(df_epi_clean$final_pneumo_decision, levels = c('negative', 'positive'))
-column_names <- setdiff(names(df_epi_clean), 'final_pneumo_decision')
 
-for (column in column_names){
-  df_summary <- df_epi_clean %>% 
-    group_by(!!sym(column), final_pneumo_decision) %>%  # Use !!sym(column) to reference column
-    summarise(count = n(), .groups = "drop")
-  
-  f_name <- paste0("barplot_", column, ".png")
-  f_path <- file.path("pictures/descriptive", paste0(f_name))
-  
-  # Position = stack
-  plot_stack <- ggplot(df_summary,
-                       aes(x = !!sym(column), y = count,
-                           fill = final_pneumo_decision)) + 
-    geom_bar(position = "stack", stat = "identity") + 
-    labs(y = "Count",
-         x = "") + 
-    theme_bw() +
-    theme(legend.position="none")
-  
-  # Position = fill
-  plot_fill <- ggplot(df_summary,
-                      aes(x = !!sym(column), y = count,
-                          fill = final_pneumo_decision)) + 
-    geom_bar(position = "fill", stat = "identity") + 
-    labs(y = "Proportion",
-         x = "") + 
-    theme_bw() +
-    theme(legend.position="none")
-  
-  # legend <- cowplot::get_legend(plot_stack)
-  
-  # Cowplot
-  png(file = f_path, width = 30, height = 12, unit = "cm", res = 600)
-  print(
-    cowplot::plot_grid(plot_stack, plot_fill,
-                       ncol = 2,
-                       labels = c("A", "B"))
-  )
-  dev.off()
-}
 
 
 
