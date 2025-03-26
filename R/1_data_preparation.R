@@ -1,8 +1,7 @@
 library(tidyverse)
-library(readxl)
-source("global/fun.R")
 
-df_epi_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver2.xlsx",
+# Data cleaning process for epiData ############################################
+df_epi_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver3.xlsx",
                                  sheet = "Lombok") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub(" ", "_", SPECIMEN_ID),
@@ -28,7 +27,7 @@ df_epi_lombok_duplicated_ids <- df_epi_lombok %>%
 write.csv(df_epi_lombok, "raw_data/temporary_df_epi_lombok.csv",
           row.names = F)
 
-df_epi_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver2.xlsx",
+df_epi_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver3.xlsx",
                                     sheet = "Sumbawa") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub("-", "_", SPECIMEN_ID),
@@ -87,7 +86,7 @@ df_epi_merged_summarise <- df_epi_merged %>%
 # then, pick some interesting columns to be analysed
 df_epi_clean <- df_epi_merged %>% 
   dplyr::select(specimen_id, s_pneumoniae_suspect_culture_colony,
-                optochin, s_pneumoniae_culture_result, wgs_result12,
+                optochin, s_pneumoniae_culture_result, wgs_result11, wgs_result12,
                 serotype_wgs, # will be modified to VTs and NVTs
                 age_month, # will be modified soon and classified according to some ageGroups
                 area,
@@ -139,7 +138,9 @@ df_epi_clean <- df_epi_merged %>%
                 
                 # vaccination
                 sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib, # I can't trust the calculations, I inspect n from dates
-                sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd # I can't trust the calculations, I inspect n from dates
+                sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib_dc,
+                sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd, # I can't trust the calculations, I inspect n from dates
+                sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd_dc
                 ) %>% 
   dplyr::mutate(
     final_pneumo_decision = case_when(
@@ -195,6 +196,7 @@ df_epi_clean <- df_epi_merged %>%
     workLab_culture_suspect = s_pneumoniae_suspect_culture_colony,
     workLab_culture_result = s_pneumoniae_culture_result,
     workLab_optochin = optochin,
+    workWGS_success_failed = wgs_result11,
     workWGS_species = wgs_result12,
     workWGS_serotype = serotype_wgs,
     workWGS_serotype_classification_PCV13 = serotype_classification_PCV13,
@@ -232,8 +234,28 @@ df_epi_clean <- df_epi_merged %>%
     antibiotic_past3days = apakah_anak_tersebut_pernah_diberi_obat_antibiotik_3_hari_terakhir_ini,
     antibiotic_past1mo = apakah_anak_tersebut_pernah_diberi_obat_antibiotik_1_bulan_terakhir_ini,
     vaccination_hibpentavalent_n = sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib,
-    vaccination_pcv13_n = sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd
+    vaccination_hibpentavalent_dc_n = sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib_dc,
+    vaccination_pcv13_n = sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd,
+    vaccination_pcv13_dc_n = sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd_dc
+    
   ) %>% 
+  # generate final classifications from house_ info
+  dplyr::mutate(
+    house_roof_regroup = case_when(
+      house_roof %in% c("batako", "beton", "genteng logam") ~ "others",
+      TRUE ~ house_roof
+    ),
+    house_building_regroup = case_when(
+      house_building %in% c("anyaman bambu", "bambu") ~ "bambu",
+      house_building %in% c("batu", "batu bata") ~ "batu bata",
+      house_building %in% c("kayu", "triplek") ~ "triplek",
+      TRUE ~ house_building
+    ),
+    house_window_regroup = case_when(
+      house_window %in% c("bambu", "kayu") ~ "bambu/kayu",
+      TRUE ~ house_window
+    )
+  )
   # combine to available fasta
   dplyr::left_join(read.table("raw_data/test_available_fasta_renamed.txt", header = FALSE) %>% 
                      dplyr::mutate(workFasta_check = "Accepted_by_DC",
@@ -252,130 +274,130 @@ write.csv(df_epi_clean, "raw_data/temporary_df_epi_lombok_sumbawa_manual_combine
 df_epi_clean <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned.csv")
 
 df_epi_coded <- df_epi_clean %>% 
-  dplyr::mutate(
-    coded_sex = case_when(
-      sex == "laki-laki" ~ 1,
-      sex == "perempuan" ~ 2,
-      TRUE ~ NA_real_
-      ),
-    coded_tribe = case_when(
-      tribe == "sasak" ~ 2,
-      tribe == "bali" ~ 3,
-      tribe == "sumbawa" ~ 10,
-      TRUE ~ NA_real_
-    ),
-    coded_breastMilk_given = case_when(
-      breastMilk_given == "yes" ~ 1,
-      breastMilk_given == "no" ~ 2,
-      TRUE ~ NA_real_
-    ),
-    coded_breastMilk_still_being_given = case_when(
-      breastMilk_still_being_given == "yes" ~ 1,
-      breastMilk_still_being_given == "no" ~ 2,
-      TRUE ~ NA_real_
-    ),
-    coded_contact_kindergarten = case_when(
-      contact_kindergarten == "yes" ~ 1,
-      contact_kindergarten == "no" ~ 2,
-      TRUE ~ NA_real_
-    ),
-    coded_contact_otherChildren = case_when(
-      contact_otherChildren == "yes" ~ 1,
-      contact_otherChildren == "no" ~ 2,
-      TRUE ~ NA_real_
-    ),
-    coded_contact_cigarettes = case_when(
-      contact_cigarettes == "yes" ~ 1,
-      contact_cigarettes == "no" ~ 2,
-      TRUE ~ NA_real_
-    ),
-    coded_contact_cooking_fuel = case_when(
-      contact_cooking_fuel == "lpg/gas alam" ~ 1,
-      contact_cooking_fuel == "kayu" ~ 2,
-      contact_cooking_fuel == "minyak tanah" ~ 3,
-      TRUE ~ NA_real_
-    ),
-    coded_contact_cooking_place = case_when(
-      contact_cooking_place == "di dalam rumah" ~ 1,
-      contact_cooking_place == "di luar rumah" ~ 2,
-      TRUE ~ NA_real_
-    ),
-    coded_house_roof = case_when(
-      house_roof == "seng" ~ 1,
-      house_roof %in% c("asbes", "batako") ~ 2,
-      house_roof == "beton" ~ 3,
-      house_roof == "kayu" ~ 4,
-      house_roof %in% c("genteng", "genteng logam") ~ 5,
-      house_roof == "spandek" ~ 6,
-      house_roof %in% c("jerami", "daun palem", "lain-lain") ~ 7,
-      TRUE ~ NA_real_
-    ),
-    coded_house_building = case_when(
-      house_building == "batu bata" ~ 1,
-      house_building == "kayu" ~ 2,
-      house_building %in% c("bambu", "anyaman bambu") ~ 3,
-      house_building == "triplek" ~ 4,
-      house_building == "batako" ~ 5,
-      house_building == "batu" ~ 6,
-      TRUE ~ NA_real_
-    ),
-    coded_house_window = case_when(
-      house_window == "kaca/tirai" ~ 1,
-      house_window == "kayu" ~ 2,
-      house_window == "bambu" ~ 3,
-      house_window == "tidak ada/terbuka" ~ 4,
-      TRUE ~ NA_real_
-    ),
-    coded_hospitalised_last_3mo = case_when(
-      hospitalised_last_3mo == "yes" ~ 1,
-      hospitalised_last_3mo == "no" ~ 2,
-      hospitalised_last_3mo == "unknown" ~ 3,
-      TRUE ~ NA_real_
-    ),
-    coded_healthcareVisit_last_3mo = case_when(
-      healthcareVisit_last_3mo == "yes" ~ 1,
-      healthcareVisit_last_3mo == "no" ~ 2,
-      TRUE ~ NA_real_
-    ),
-    coded_sickness_past3days_fever = case_when(
-      sickness_past3days_fever == "yes" ~ 1,
-      sickness_past3days_fever == "no" ~ 2,
-      sickness_past3days_fever == "unknown" ~ 3,
-      TRUE ~ NA_real_
-    ),
-    coded_antibiotic_past3days = case_when(
-      antibiotic_past3days == "yes" ~ 1,
-      antibiotic_past3days == "no" ~ 2,
-      antibiotic_past3days == "unknown" ~ 3,
-      TRUE ~ NA_real_
-    ),
-    coded_vaccination_hibpentavalent_n = case_when(
-      vaccination_hibpentavalent_n == 4 ~ 1,
-      vaccination_hibpentavalent_n == 3 ~ 2,
-      vaccination_hibpentavalent_n == 2 ~ 3,
-      vaccination_hibpentavalent_n == 1 ~ 4,
-      vaccination_hibpentavalent_n == 0 ~ 5,
-      TRUE ~ NA_real_
-    ),
-    coded_vaccination_pcv13_n = case_when(
-      vaccination_pcv13_n == 4 ~ 1,
-      vaccination_pcv13_n == 3 ~ 2,
-      vaccination_pcv13_n == 2 ~ 3,
-      vaccination_pcv13_n == 1 ~ 4,
-      vaccination_pcv13_n == 0 ~ 5,
-      TRUE ~ NA_real_
-    ),
-    coded_final_pneumo_decision = case_when(
-      final_pneumo_decision == "positive" ~ 1,
-      final_pneumo_decision == "negative" ~ 2,
-      TRUE ~ NA_real_
-    ),
-    coded_area = case_when(
-      area == "lombok" ~ 1,
-      area == "sumbawa" ~ 2,
-      TRUE ~ NA_real_
-    )
-  ) %>% 
+  # dplyr::mutate(
+  #   coded_sex = case_when(
+  #     sex == "laki-laki" ~ 1,
+  #     sex == "perempuan" ~ 2,
+  #     TRUE ~ NA_real_
+  #     ),
+  #   coded_tribe = case_when(
+  #     tribe == "sasak" ~ 2,
+  #     tribe == "bali" ~ 3,
+  #     tribe == "sumbawa" ~ 10,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_breastMilk_given = case_when(
+  #     breastMilk_given == "yes" ~ 1,
+  #     breastMilk_given == "no" ~ 2,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_breastMilk_still_being_given = case_when(
+  #     breastMilk_still_being_given == "yes" ~ 1,
+  #     breastMilk_still_being_given == "no" ~ 2,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_contact_kindergarten = case_when(
+  #     contact_kindergarten == "yes" ~ 1,
+  #     contact_kindergarten == "no" ~ 2,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_contact_otherChildren = case_when(
+  #     contact_otherChildren == "yes" ~ 1,
+  #     contact_otherChildren == "no" ~ 2,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_contact_cigarettes = case_when(
+  #     contact_cigarettes == "yes" ~ 1,
+  #     contact_cigarettes == "no" ~ 2,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_contact_cooking_fuel = case_when(
+  #     contact_cooking_fuel == "lpg/gas alam" ~ 1,
+  #     contact_cooking_fuel == "kayu" ~ 2,
+  #     contact_cooking_fuel == "minyak tanah" ~ 3,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_contact_cooking_place = case_when(
+  #     contact_cooking_place == "di dalam rumah" ~ 1,
+  #     contact_cooking_place == "di luar rumah" ~ 2,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_house_roof = case_when(
+  #     house_roof == "seng" ~ 1,
+  #     house_roof %in% c("asbes", "batako") ~ 2,
+  #     house_roof == "beton" ~ 3,
+  #     house_roof == "kayu" ~ 4,
+  #     house_roof %in% c("genteng", "genteng logam") ~ 5,
+  #     house_roof == "spandek" ~ 6,
+  #     house_roof %in% c("jerami", "daun palem", "lain-lain") ~ 7,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_house_building = case_when(
+  #     house_building == "batu bata" ~ 1,
+  #     house_building == "kayu" ~ 2,
+  #     house_building %in% c("bambu", "anyaman bambu") ~ 3,
+  #     house_building == "triplek" ~ 4,
+  #     house_building == "batako" ~ 5,
+  #     house_building == "batu" ~ 6,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_house_window = case_when(
+  #     house_window == "kaca/tirai" ~ 1,
+  #     house_window == "kayu" ~ 2,
+  #     house_window == "bambu" ~ 3,
+  #     house_window == "tidak ada/terbuka" ~ 4,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_hospitalised_last_3mo = case_when(
+  #     hospitalised_last_3mo == "yes" ~ 1,
+  #     hospitalised_last_3mo == "no" ~ 2,
+  #     hospitalised_last_3mo == "unknown" ~ 3,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_healthcareVisit_last_3mo = case_when(
+  #     healthcareVisit_last_3mo == "yes" ~ 1,
+  #     healthcareVisit_last_3mo == "no" ~ 2,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_sickness_past3days_fever = case_when(
+  #     sickness_past3days_fever == "yes" ~ 1,
+  #     sickness_past3days_fever == "no" ~ 2,
+  #     sickness_past3days_fever == "unknown" ~ 3,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_antibiotic_past3days = case_when(
+  #     antibiotic_past3days == "yes" ~ 1,
+  #     antibiotic_past3days == "no" ~ 2,
+  #     antibiotic_past3days == "unknown" ~ 3,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_vaccination_hibpentavalent_n = case_when(
+  #     vaccination_hibpentavalent_n == 4 ~ 1,
+  #     vaccination_hibpentavalent_n == 3 ~ 2,
+  #     vaccination_hibpentavalent_n == 2 ~ 3,
+  #     vaccination_hibpentavalent_n == 1 ~ 4,
+  #     vaccination_hibpentavalent_n == 0 ~ 5,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_vaccination_pcv13_n = case_when(
+  #     vaccination_pcv13_n == 4 ~ 1,
+  #     vaccination_pcv13_n == 3 ~ 2,
+  #     vaccination_pcv13_n == 2 ~ 3,
+  #     vaccination_pcv13_n == 1 ~ 4,
+  #     vaccination_pcv13_n == 0 ~ 5,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_final_pneumo_decision = case_when(
+  #     final_pneumo_decision == "positive" ~ 1,
+  #     final_pneumo_decision == "negative" ~ 2,
+  #     TRUE ~ NA_real_
+  #   ),
+  #   coded_area = case_when(
+  #     area == "lombok" ~ 1,
+  #     area == "sumbawa" ~ 2,
+  #     TRUE ~ NA_real_
+  #   )
+  # ) %>% 
   # conduct corrections for supposedly NUMERICAL and FACTOR (not ordered) columns!
   dplyr::mutate(
     age_month = as.numeric(age_month),
@@ -389,6 +411,10 @@ df_epi_coded <- df_epi_clean %>%
     hospitalised_last_3mo_n = as.numeric(hospitalised_last_3mo_n),
     healthcareVisit_last_3mo_n = as.numeric(healthcareVisit_last_3mo_n), # 1 "unknown" is replaced as NA
     # healthcareVisit_last_3mo_n = dplyr::na_if(healthcareVisit_last_3mo_n, "unknown")
+    vaccination_hibpentavalent_n = as.numeric(vaccination_hibpentavalent_n),
+    vaccination_hibpentavalent_dc_n = as.numeric(vaccination_hibpentavalent_dc_n),
+    vaccination_pcv13_n = as.numeric(vaccination_pcv13_n),
+    vaccination_pcv13_dc_n = as.numeric(vaccination_pcv13_dc_n),
     area = as.factor(area),
     sex = as.factor(sex),
     tribe = as.factor(tribe),
@@ -400,8 +426,11 @@ df_epi_coded <- df_epi_clean %>%
     contact_cooking_fuel = as.factor(contact_cooking_fuel),
     contact_cooking_place = as.factor(contact_cooking_place),
     house_building = as.factor(house_building),
+    house_building_regroup = as.factor(house_building_regroup),
     house_roof = as.factor(house_roof),
+    house_roof_regroup = as.factor(house_roof_regroup),
     house_window = as.factor(house_window),
+    house_window_regroup = as.factor(house_window_regroup),
     hospitalised_last_3mo = as.factor(hospitalised_last_3mo),
     healthcareVisit_last_3mo = as.factor(healthcareVisit_last_3mo),
     sickness_past3days_fever = as.factor(sickness_past3days_fever),
@@ -444,97 +473,258 @@ filtered_0 <- df_epi_coded %>%
   dplyr::filter(healthcareVisit_last_3mo_n != 0)
 get_mmm(filtered_0$healthcareVisit_last_3mo_n)
 
-write.csv(df_epi_coded, "raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned_coded.csv")
+write.csv(df_epi_coded, "inputs/epiData.csv")
 
 
-# Test epiFunction ehehe
-# try OR report works only for categorical data
-df_epi_coded_chars <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned_coded.csv") %>% 
-  dplyr::select(where(~ !all(is.na(.))), # NAs in workLab, workFasta & not interesting columns
-                -sickness_past3days_fever_howManyDays, # conflicted values with fever column
-                -contains("coded_"),
-                -X, -specimen_id)
-
-or_matrix_all <- generate_or_matrix_report(df_input = df_epi_coded_chars,
-                                           binary_disease = "final_pneumo_decision")
-
-or_matrix_table_report <- dplyr::full_join(
-  purrr::imap_dfr(or_matrix_all, ~{
-    df <- .x$measure
-    if (is.null(df)) return(NULL)
-    
-    df %>%
-      as.data.frame() %>%
-      dplyr::mutate(aspect = .y, category = rownames(df)) %>%
-      dplyr::relocate(aspect, category) # Moves to first columns
-  }),
-  purrr::imap_dfr(or_matrix_all, ~{
-    df <- .x$p.value
-    if (is.null(df)) return(NULL)
-    
-    df %>%
-      as.data.frame() %>%
-      dplyr::mutate(aspect = .y, category = rownames(df)) %>%
-      dplyr::relocate(aspect, category)
-  }),
-  by = c("aspect", "category")
+# Data cleaning process for workLab ############################################
+df_workLab <- dplyr::bind_rows(
+  readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver3.xlsx",
+                     sheet = "Lombok") %>% 
+    dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
+    dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
+    dplyr::mutate(specimen_id = gsub(" ", "_", specimen_id),
+                  area = "Lombok",
+                  across(where(is.character), ~ na_if(., "N/A")),
+                  across(where(is.character), ~ if_else(. == "-", "tidak", .))) %>% 
+    dplyr::select(2:13, area)
+  ,
+  readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver3.xlsx",
+                     sheet = "Sumbawa") %>% 
+    dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
+    dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
+    dplyr::mutate(specimen_id = gsub("-", "_", specimen_id),
+                  area = "Sumbawa",
+                  across(where(is.character), ~ na_if(., "N/A")),
+                  across(where(is.character), ~ if_else(. == "-", "tidak", .))) %>% 
+    dplyr::select(2:13, area)
 ) %>% 
-  dplyr::mutate(
-    significance = case_when(
-      midp.exact < 0.05 | fisher.exact < 0.05 | chi.square < 0.05 ~ "occur",
-      !is.na(midp.exact) & !is.na(fisher.exact) & !is.na(chi.square) ~ "not occur",
-      TRUE ~ NA_character_
-    )) %>% 
-  dplyr::select(aspect, category, estimate, lower, upper, 
-                midp.exact, fisher.exact, chi.square, significance)
-
-
-  
-
-# try glm OR report
-or_logistic_all <- generate_glm_logistic_report(df_input = df_epi_coded_chars,
-                                                binary_disease = "final_pneumo_decision")
-
-or_logistic_model_report <- purrr::imap_dfr(or_logistic_all, ~{
-  model <- .x$model
-  coefficients_df <- broom::tidy(model) %>%
-    mutate(aspect = .y) %>%
-    rename(category = term)
-  
-  model_stats <- dplyr::tibble(
-    aspect = .y,
-    null_deviance = model$null.deviance,
-    residual_deviance = model$deviance,
-    df_null = model$df.null,
-    df_residual = model$df.residual,
-    AIC = model$aic
-  )
-  
-  # Combine everything into one table
-  dplyr::left_join(coefficients_df, model_stats, by = "aspect")
-}) %>% 
-  dplyr::mutate(OR = exp(estimate), # estimate is log(OR)
-                OR_lower_CI = exp(estimate - 1.96 * std.error),
-                OR_upper_CI = exp(estimate + 1.96 * std.error),
-                significance = case_when(
-                  p.value < 0.05 ~ "occur",
-                  !is.na(p.value) ~ "not occur",
-                  TRUE ~ NA_character_)
+  # rename to simplify my life
+  dplyr::rename(
+    workLab_culture_suspect = s_pneumoniae_suspect_culture_colony,
+    workLab_culture_result = s_pneumoniae_culture_result,
+    workLab_culture_notes = notes,
+    workLab_optochin = optochin,
+    workWGS_success_failed = wgs_result11,
+    workWGS_species = wgs_result12,
+    workWGS_serotype = serotype_wgs
   ) %>% 
-  dplyr::arrange(aspect) %>% 
-  dplyr::select(aspect, category, estimate, std.error,
-                OR, OR_lower_CI, OR_upper_CI,
-                statistic, p.value, significance,
-                null_deviance, residual_deviance, df_null, df_residual, AIC)
+  # mutate all "N/A" values
+  dplyr::mutate(across(where(is.character), ~ na_if(., "N/A"))) %>% 
+  dplyr::left_join(read.table("raw_data/test_available_fasta_renamed.txt", header = FALSE) %>% 
+                     dplyr::mutate(workFasta_file_check = "Accepted_by_DC",
+                                   specimen_id = gsub("Streptococcus_pneumoniae_", "", V1),
+                                   specimen_id = gsub(".fasta", "", specimen_id),
+                                   workFasta_name_with_extension = V1) %>% 
+                     dplyr::select(-V1)
+                   ,
+                   by = "specimen_id"
+  ) %>% 
+  # view() %>% 
+  glimpse()
+
+write.csv(df_workLab, "inputs/workLab_data.csv")
+
+# Generate report for fasta files not accepted by DC (yet)
+fasta_missing_report <- df_workLab %>% 
+  dplyr::filter(workWGS_species == "Streptococcus pneumoniae" & is.na(file_check)) %>% 
+  view() %>% 
+  glimpse()
+
+write.csv(fasta_missing_report, "report/temporary_missing_fasta_list_in_DC.csv")
+write.table(fasta_missing_report %>% 
+              dplyr::select(specimen_id),
+            "report/temporary_missing_fasta_list_in_DC.txt",
+            row.names = F, quote = F)
+
+# Data cleaning process for genData ############################################
+# Apparently "No Isolat" is based on the first line inside <cat *.fasta>.
+# I extract "No Isolat" on terminal:
+# for f in *.fa*; do  
+# awk -v fname="$f" '/^>/ {print fname "," substr($0,2)}' "$f"
+# done > /home/ron/pneumo_2025_lesserSundas/raw_data/test_fasta_headers.csv
+
+# BE CAREFUL while inspecting Data WGS_Lombok.xlsx;
+# 49 "No Isolat" with joined <location ID> & <participat ID>
+# I manually edit this inconsistencies
+
+df_gen_all <- dplyr::left_join(
+  read.csv("raw_data/test_fasta_headers.csv", header = F) %>% 
+    stats::setNames(c("workFasta_name_with_extension", "workFasta_genome_name")) %>% 
+    dplyr::mutate(workFasta_name = gsub("\\.fasta$", "", workFasta_name_with_extension))
+  ,
+  readxl::read_excel("raw_data/Data WGS_Lombok_ver3.xlsx") %>% 
+    dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
+    dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
+    dplyr::rename_all(~ paste0("workWGS_", .)) %>% 
+    dplyr::rename(
+      workWGS_MLST_pw_ST = workWGS_sequence_type,
+      workWGS_MLST_pw_aroe = workWGS_aroe,
+      workWGS_MLST_pw_gdh = workWGS_gdh,
+      workWGS_MLST_pw_gki = workWGS_gki,
+      workWGS_MLST_pw_recp = workWGS_recp,
+      workWGS_MLST_pw_spi = workWGS_spi,
+      workWGS_MLST_pw_xpt = workWGS_xpt,
+      workWGS_MLST_pw_ddl = workWGS_ddl
+    )
+  ,
+  join_by("workFasta_name" == "workWGS_dc_id")
+  ) %>% 
+  dplyr::left_join(
+    read.csv("raw_data/result_mlst/mlst_results.csv", header = F, sep = "\t") %>% 
+      stats::setNames(c("workFasta_name_with_extension", "sp", "workWGS_MLST_dc_ST",
+                        "workWGS_MLST_dc_aroe", "workWGS_MLST_dc_gdh", "workWGS_MLST_dc_gki",
+                        "workWGS_MLST_dc_recp", "workWGS_MLST_dc_spi", "workWGS_MLST_dc_xpt", "workWGS_MLST_dc_ddl")) %>% 
+      dplyr::mutate(workFasta_name_with_extension = gsub("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta/", "", workFasta_name_with_extension),
+                    workWGS_MLST_dc_aroe = gsub("aroE\\(", "", workWGS_MLST_dc_aroe) %>% gsub("\\)$", "", .),
+                    workWGS_MLST_dc_gdh = gsub("gdh\\(", "", workWGS_MLST_dc_gdh) %>% gsub("\\)$", "", .),
+                    workWGS_MLST_dc_gki = gsub("gki\\(", "", workWGS_MLST_dc_gki) %>% gsub("\\)$", "", .),
+                    workWGS_MLST_dc_recp = gsub("recP\\(", "", workWGS_MLST_dc_recp) %>% gsub("\\)$", "", .),
+                    workWGS_MLST_dc_spi = gsub("spi\\(", "", workWGS_MLST_dc_spi) %>% gsub("\\)$", "", .),
+                    workWGS_MLST_dc_xpt = gsub("xpt\\(", "", workWGS_MLST_dc_xpt) %>% gsub("\\)$", "", .),
+                    workWGS_MLST_dc_ddl = gsub("ddl\\(", "", workWGS_MLST_dc_ddl) %>% gsub("\\)$", "", .)
+      )
+    ,
+    by = "workFasta_name_with_extension"
+  ) %>% 
+  dplyr::left_join(
+    read.csv("raw_data/result_assembly_stats/compiled_assembly_stats.csv") %>% 
+      dplyr::rename_all(~ paste0("workWGS_stats_", .))
+    ,
+    join_by("workFasta_name_with_extension" == "workWGS_stats_my_ID")
+  ) %>% 
+  dplyr::left_join(
+    read.csv("raw_data/result_pneumokity/Collated_result_data.csv") %>% 
+      dplyr::rename_all(~ paste0("workWGS_kity_", .))
+    ,
+    join_by("workFasta_name" == "workWGS_kity_sampleid")
+  ) %>% 
+  # generate specimen_id
+  dplyr::mutate(specimen_id = gsub("Streptococcus_pneumoniae_", "", workFasta_name)) %>% 
+  glimpse()
+
+write.csv(df_gen_all, "inputs/genData.csv")
+
+# Test duplicated ID
+df_gen_all_duplicated_ids <- df_gen_all %>% 
+  dplyr::count(workFasta_name_with_extension) %>% 
+  dplyr::filter(workFasta_name_with_extension > 1) %>% 
+  dplyr::mutate(category = case_when(
+    n == 2 ~ "Duplicated",
+    n == 3 ~ "Triplicated",
+    n == 4 ~ "Quadruplicated",
+    n > 4 ~ "More than Quadruplicated"
+  )) %>% 
+  view()
+
+# Test data similarities from df_workLab & df_gen_all ##########################
+workLab_test <- df_workLab %>% 
+  dplyr::left_join(
+    df_gen_all %>% 
+      dplyr::select(workFasta_name_with_extension, 10:12)
+    ,
+    by = "workFasta_name_with_extension"
+  ) %>% 
+  view() %>% 
+  glimpse()
+
+report_data_inconsistencies <- workLab_test %>% 
+  dplyr::filter(!is.na(workWGS_success_failed) & !is.na(workWGS_serotype.x)) %>% 
+  view()
+
+write.csv(report_data_inconsistencies, "report/temporary_WGS_inconsistencies_workLab_vs_workWGS.csv")
 
 
-# try glm multivariable OR report
-or_multivariable_all <- generate_glm_multivariable_report(df_input = df_epi_coded_chars, binary_disease = "final_pneumo_decision")
+
+
+# Selecting final pneumo decision
+workLab_test <- workLab_test %>% 
+  group_by(workLab_culture_suspect, workLab_optochin,
+           workLab_culture_result, workWGS_species,
+           # workFasta_check,
+           final_pneumo_decision) %>% 
+  summarise(count = n()) %>% 
+  view() %>% 
+  glimpse()
+
+# Test genome quality & contaminations
+df_gen_all_testStats <- df_gen_all %>% 
+  dplyr::select(workFasta_name_with_extension,
+                workWGS_serotype, workWGS_sequence_type, workWGS_gpsc_strain,
+                workWGS_genome_length,
+                workWGS_stats_N50, workWGS_kity_top_hits, 
+                workWGS_kity_max_percent, workWGS_kity_stage1_result,
+                workWGS_kity_rag_status) %>% 
+  dplyr::mutate(
+    workWGS_kity_singleSerotype1 = case_when(
+      !grepl("/", workWGS_kity_stage1_result) & !grepl("_", workWGS_kity_stage1_result) & !grepl("-", workWGS_kity_stage1_result) ~ "single",
+      TRUE ~ workWGS_kity_stage1_result
+    ),
+    workWGS_kity_singleSerotype2 = case_when(
+      !grepl("Below", workWGS_kity_stage1_result) & !grepl("Mixed", workWGS_kity_stage1_result) ~ "single",
+      TRUE ~ workWGS_kity_stage1_result
+    )
+  ) %>% 
+  view() %>% 
+  glimpse()
+
+df_gen_all_testStats_filtered <- df_gen_all_testStats %>% 
+  dplyr::filter()
+
+ggplot(df_gen_all_testStats, aes(x = workWGS_kity_rag_status,
+                                 y = workWGS_genome_length,
+                                 fill = workWGS_kity_stage1_result)) +
+  geom_bar(position="stack", stat="identity") +
+  theme_bw()
+
+# Annoying data wrangling
+kity_percent <- df_gen_all_testStats %>% 
+  # workWGS_kity_stage1_result OR workWGS_kity_singleSerotype
+  dplyr::count(workWGS_kity_singleSerotype2) %>% 
+  dplyr::mutate(percent = round(proportions(n) * 100, 1),
+                print = str_c(n, "(", percent, "%)"),
+                workWGS_kity_singleSerotype2 = factor(workWGS_kity_singleSerotype2,
+                                                         levels = c("single",
+                                                      sort(unique(workWGS_kity_singleSerotype2[grepl("^Mixed serotypes-", workWGS_kity_singleSerotype2)])),
+                                                      sort(unique(workWGS_kity_singleSerotype2[grepl("^Below", workWGS_kity_singleSerotype2)]))
+                )))
 
 
 
-# Analyse genomic data
-genome <- readxl::read_excel("raw_data/Data WGS_Lombok.xlsx")
+
+ggplot(kity_percent, aes(x = workWGS_kity_singleSerotype2,
+                         y = n)) +
+  geom_col() +
+  geom_text(aes(label = print), vjust = -0.5) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 15, hjust = 1))
+
+
+
+# Test MLST comparison
+# After inspecting the data, I would rather deal with Tseeman's result
+df_gen_all_MLST_test <- df_gen_all %>% 
+  dplyr::select(workFasta_name_with_extension,
+                workWGS_sequence_type, workWGS_aroe, workWGS_gdh, workWGS_gki,
+                workWGS_recp, workWGS_spi, workWGS_xpt, workWGS_ddl) %>% 
+  dplyr::left_join(
+    read.csv("raw_data/result_mlst/mlst_results.csv", header = F, sep = "\t") %>% 
+      stats::setNames(c("workFasta_name_with_extension", "sp", "ST",
+                        "workWGS_aroe", "workWGS_gdh", "workWGS_gki",
+                        "workWGS_recp", "workWGS_spi", "workWGS_xpt", "workWGS_ddl")) %>% 
+      dplyr::mutate(workFasta_name_with_extension = gsub("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta/", "", workFasta_name_with_extension),
+                    workWGS_aroe = gsub("aroE\\(", "", workWGS_aroe) %>% gsub("\\)$", "", .),
+                    workWGS_gdh  = gsub("gdh\\(", "", workWGS_gdh) %>% gsub("\\)$", "", .),
+                    workWGS_gki  = gsub("gki\\(", "", workWGS_gki) %>% gsub("\\)$", "", .),
+                    workWGS_recp = gsub("recP\\(", "", workWGS_recp) %>% gsub("\\)$", "", .),
+                    workWGS_spi  = gsub("spi\\(", "", workWGS_spi) %>% gsub("\\)$", "", .),
+                    workWGS_xpt  = gsub("xpt\\(", "", workWGS_xpt) %>% gsub("\\)$", "", .),
+                    workWGS_ddl  = gsub("ddl\\(", "", workWGS_ddl) %>% gsub("\\)$", "", .)
+      )
+    ,
+    by = "workFasta_name_with_extension"
+  ) %>% 
+  view()
+
 
 
 
@@ -547,12 +737,7 @@ df_epi_clean_grouped <- df_epi_clean %>%
   view() %>% 
   glimpse()
 
-# Selecting final pneumo decision
-df_epi_clean_pneumo_decision <- df_epi_clean %>% 
-  select(s_pneumoniae_suspect_culture_colony, optochin,
-         s_pneumoniae_culture_result, wgs_result12,
-         final_pneumo_decision) %>% 
-  view()
+
   
 # Demo viz
 df_epi_clean_grouped <- df_epi_clean %>% 
@@ -575,53 +760,17 @@ ggplot(df_epi_clean_grouped,
 
 
 
-# Trial visualisations (boxplot of counts and percentage) simple y = final_pneumo_decision x = columns
-# df_epi_clean$final_pneumo_decision <- factor(df_epi_clean$final_pneumo_decision, levels = c('negative', 'positive'))
-
-
-
-
-
-# pending
-# column types need to be corrected and re-checked
-df_epi_ls <- dplyr::bind_rows(df_epi_lombok #%>% 
-                                # dplyr::select(-contains("koding"))
-                              , 
-                              df_epi_sumbawa #%>% 
-                                # dplyr::select(-contains("koding"))
-                                ) %>% 
-  dplyr::mutate(across(where(is.character), ~ na_if(., "N/A")))
-                                
-# Test weird unique value
-lapply(df_epi_ls, unique)
-sapply(df_epi_ls, unique)
-
-df_epi_ls_summarise <- df_epi_ls %>% 
-  dplyr::summarise(across(everything(), ~ list(as.data.frame(table(.))))) %>% 
-  tidyr::unnest(cols = everything())
-
-view(t(df_epi_ls_summarise))
-
-
-# Data picking framework for analysis
-# Priority columns
-
-
-
-
-
-
 
 
 
 # test available fasta
-df_confirm_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver2.xlsx",
+df_confirm_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver3.xlsx",
                                         sheet = "need confirmation-lombok") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub(" ", "_", SPECIMEN_ID),
                 area = "Lombok")
 
-df_confirm_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver2.xlsx",
+df_confirm_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver3.xlsx",
                                          sheet = "need confirmation-sumbawa_DC_ed") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub(" ", "_", SPECIMEN_ID),
@@ -631,27 +780,29 @@ df_confirm_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOK
 # Generate report
 df_epi_test <- dplyr::bind_rows(
   df_epi_lombok %>% 
+    dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
     dplyr::select(2:13, area)
   ,
   df_epi_sumbawa %>% 
+    dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
     dplyr::select(2:13, area)
 ) %>% 
   # mutate all "N/A" values
   dplyr::mutate(across(where(is.character), ~ na_if(., "N/A"))) %>% 
   dplyr::left_join(read.table("raw_data/test_available_fasta_renamed.txt", header = FALSE) %>% 
                      dplyr::mutate(file_check = "Accepted_by_DC",
-                                   SPECIMEN_ID = gsub("Streptococcus_pneumoniae_", "", V1),
-                                   SPECIMEN_ID = gsub(".fasta", "", SPECIMEN_ID),
+                                   specimen_id = gsub("Streptococcus_pneumoniae_", "", V1),
+                                   specimen_id = gsub(".fasta", "", specimen_id),
                                    fasta_name = V1) %>% 
                      dplyr::select(-V1)
                    ,
-                   by = "SPECIMEN_ID"
+                   by = "specimen_id"
                    ) %>% 
   view()
 
 # Use merged data to analyse accepted samples
-df_epi_test <- df_epi_merged %>% 
-  dplyr::select(2:12, area) %>% 
+df_epi_test <- df_epi_test %>% 
+  dplyr::select(2:13, area) %>% 
   dplyr::left_join(read.table("raw_data/test_available_fasta_renamed.txt", header = FALSE) %>% 
                      dplyr::mutate(file_check = "accepted_by_dc",
                                    specimen_id = gsub("Streptococcus_pneumoniae_", "", V1),
@@ -747,15 +898,15 @@ ggplot(df_serotype_summary, aes(x = serotype_wgs, y = Percentage,
 
 # Compute percentage by area
 df_serotype_area_summary <- df_epi_clean %>% 
-  dplyr::filter(!is.na(serotype_wgs)) %>% 
-  dplyr::group_by(area, serotype_classification_PCV13, serotype_wgs) %>%
+  dplyr::filter(!is.na(workWGS_serotype)) %>% 
+  dplyr::group_by(area, serotype_classification_PCV13, workWGS_serotype) %>%
   dplyr::summarise(Count = n(), .groups = "drop") %>%
   dplyr::mutate(Percentage = Count / sum(Count) * 100,
                 serotype_classification_PCV13 = factor(serotype_classification_PCV13,
                                                        levels = c("UNTYPABLE",
                                                                   "VT", "NVT")))
 
-ggplot(df_serotype_area_summary, aes(x = serotype_wgs, y = Percentage,
+ggplot(df_serotype_area_summary, aes(x = workWGS_serotype, y = Percentage,
                                      fill = area)) +
   geom_bar(stat = "identity", position = position_dodge()) +
   # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
@@ -783,10 +934,12 @@ df_epi_test_right_join <- dplyr::bind_rows(
                    ,
                    by = "SPECIMEN_ID"
   ) %>% 
+  dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
+  dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
   view()
 
 undetected_fasta_report <- df_epi_test_right_join %>% 
-  dplyr::filter(is.na(Processing_Status)) %>% 
+  dplyr::filter(is.na(processing_status)) %>% 
   dplyr::mutate(V1 = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta/", V1)) %>% 
   dplyr::select(V1)
 
@@ -820,64 +973,3 @@ write.table(undetected_fasta_report, "raw_data/test_undetected_49_fasta.txt",
 
 
 
-df_epi <- read.csv("raw_data/oral_cancer_prediction_dataset.csv") %>% 
-  dplyr::rename_all(~stringr::str_replace_all(., " ", "_"))
-
-df_gen <- df_epi %>% 
-  dplyr::filter(Oral.Cancer..Diagnosis. == "Yes") %>% 
-  dplyr::mutate(Sero_rand = sample(c(1:100), n(), replace = T),
-                GPSC_rand = sample(c(1:200), n(), replace = T),
-                MLST_rand = sample(c(30:1000), n(), replace = T)) %>% 
-  dplyr::select(ID, Sero_rand, GPSC_rand, MLST_rand)
-
-write.csv(df_gen, "raw_data/generate_genomics.csv", row.names = F)
-
-################################################################################
-
-meta <- dplyr::left_join(
-  read.csv("raw_data/oral_cancer_prediction_dataset.csv"),
-  read.csv("raw_data/generate_genomics.csv")
-  ,
-  by = "ID"
-)
-
-write.csv(meta, "raw_data/generate_combined_metadata.csv", row.names = F)
-
-
-df_test <- df_epi %>% 
-  select(Country, Age, Gender, Tobacco.Use, Oral.Cancer..Diagnosis.) %>% 
-  mutate(Age = as.character(Age)) %>% 
-  select(-Age)
-
-# Age failed to be reported; should edit the continuous, numerical value to categorical data instead
-
-# try OR report works only for categorical data
-or_matrix_all <- generate_or_matrix_report(df_input = df_test, binary_disease = "Oral.Cancer..Diagnosis.")
-
-or_matrix_table_report <- purrr::map_dfr(names(or_matrix_all), function(var) {
-  df <- or_matrix_all[[var]]$measure
-  if (is.null(df)) return(NULL)
-  df <- as.data.frame(df) # annoying df convertion
-  
-  df <- df %>% 
-    dplyr::mutate(Aspect = var, Category = rownames(df)) 
-  
-  rownames(df) <- NULL
-  return(df)
-})
-
-# try glm OR report
-or_logistic_all <- generate_glm_logistic_report(df_input = df_test, binary_disease = "Oral.Cancer..Diagnosis.")
-
-or_logistic_table_report <- purrr::imap_dfr(or_logistic_all, ~{
-  dplyr::tibble(
-    Names = names(.x$odds_ratio),
-    Odds_Ratio = .x$odds_ratio,
-    Category = .y
-  )
-}) %>% 
-  dplyr::arrange(Category)
-
-
-# try glm multivariable OR report
-or_multivariable_all <- generate_glm_multivariable_report(df_input = df_test, binary_disease = "Oral.Cancer..Diagnosis.")

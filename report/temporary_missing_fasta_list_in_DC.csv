@@ -1,0 +1,20 @@
+"","specimen_id","processing_status","processing_date_culture","workLab_culture_suspect","workLab_optochin","workLab_culture_result","kode_1_positif_2_negatif_3_not_yet","workLab_culture_notes","wgs_shipment_date","workWGS_success_failed","workWGS_species","workWGS_serotype","area","file_check","fasta_name"
+"1","SWQ_017","SWQ_017","14 Juni 2023","Yes","S","Pos",1,"Green colony","45570.0","Streptococcus_pneumoniae_SWQ017","Streptococcus pneumoniae","14.0","Sumbawa",NA,NA
+"2","SWQ_024","SWQ_024","45239.0","Yes","S","Pos",1,"Green colony","45570.0","Streptococcus_pneumoniae_SWQ024","Streptococcus pneumoniae","34.0","Sumbawa",NA,NA
+"3","SWQ_317","SWQ_317","45355.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ317","Streptococcus pneumoniae","6A","Sumbawa",NA,NA
+"4","SWQ_318","SWQ_318","45355.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ318","Streptococcus pneumoniae","6C","Sumbawa",NA,NA
+"5","SWQ_325","SWQ_325","45355.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ325","Streptococcus pneumoniae","35B","Sumbawa",NA,NA
+"6","SWQ_351","SWQ_351","45371.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ351","Streptococcus pneumoniae","15B","Sumbawa",NA,NA
+"7","SWQ_353","SWQ_353","45371.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ353","Streptococcus pneumoniae","7C","Sumbawa",NA,NA
+"8","SWQ_362","SWQ_362","45376.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ362","Streptococcus pneumoniae","14.0","Sumbawa",NA,NA
+"9","SWQ_369","SWQ_369","45376.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ369","Streptococcus pneumoniae","13.0","Sumbawa",NA,NA
+"10","SWQ_377","SWQ_377","45376.0","Yes","S","Pos",1,"Green colony","45570.0","Streptococcus pneumoniae","Streptococcus pneumoniae","23F","Sumbawa",NA,NA
+"11","SWQ_010","SWQ_010","14 Juni 2023","Yes","S","Pos",1,"Green colony","45570.0","Streptococcus_pneumoniae_SWQ010","Streptococcus pneumoniae","28A","Sumbawa",NA,NA
+"12","SWQ_030","SWQ_030","45239.0","Yes","S","Pos",1,"Green colony","45570.0","Streptococcus_pneumoniae_SWQ030","Streptococcus pneumoniae","33B","Sumbawa",NA,NA
+"13","SWQ_153","SWQ_153","45349.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ153","Streptococcus pneumoniae","15C","Sumbawa",NA,NA
+"14","SWQ_305","SWQ_305","45350.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ305","Streptococcus pneumoniae","15C","Sumbawa",NA,NA
+"15","SWQ_324","SWQ_324","45355.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ324","Streptococcus pneumoniae","15C","Sumbawa",NA,NA
+"16","SWQ_352","SWQ_352","45371.0","Yes","S","Pos",1,"Green colony","45547.0","Streptococcus_pneumoniae_SWQ352","Streptococcus pneumoniae","15B","Sumbawa",NA,NA
+"17","SWQ_390","SWQ_390","45376.0","Yes","S","Pos",1,"Green colony","45570.0","Streptococcus pneumoniae","Streptococcus pneumoniae","23F","Sumbawa",NA,NA
+"18","SWQ_442","SWQ_442","45354.0","Yes","S","Pos",1,"Green colony","45570.0","Streptococcus pneumoniae","Streptococcus pneumoniae","11A","Sumbawa",NA,NA
+"19","SWQ_446","SWQ_446","45354.0","Yes","S","Pos",1,"Green colony","45570.0","Streptococcus_pneumoniae_SWQ446","Streptococcus pneumoniae","23A","Sumbawa",NA,NA

@@ -1,6 +1,6 @@
 library(tidyverse)
-source("global/fun.R")
 
+# Data analyses process for epiData ############################################
 df_epi_coded <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned_coded.csv") %>% 
   dplyr::select(-X, -specimen_id) %>% 
   # conduct corrections for supposedly NUMERICAL and FACTOR (not ordered) columns!
@@ -16,6 +16,10 @@ df_epi_coded <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combin
     hospitalised_last_3mo_n = as.numeric(hospitalised_last_3mo_n),
     healthcareVisit_last_3mo_n = as.numeric(healthcareVisit_last_3mo_n), # 1 "unknown" is replaced as NA
     # healthcareVisit_last_3mo_n = dplyr::na_if(healthcareVisit_last_3mo_n, "unknown")
+    vaccination_hibpentavalent_n = as.numeric(vaccination_hibpentavalent_n),
+    vaccination_hibpentavalent_dc_n = as.numeric(vaccination_hibpentavalent_dc_n),
+    vaccination_pcv13_n = as.numeric(vaccination_pcv13_n),
+    vaccination_pcv13_dc_n = as.numeric(vaccination_pcv13_dc_n),
     area = as.factor(area),
     sex = as.factor(sex),
     tribe = as.factor(tribe),
@@ -113,5 +117,5 @@ for (column in column_names){
 
 
 
-
+# Data analyses process for genData ############################################
 

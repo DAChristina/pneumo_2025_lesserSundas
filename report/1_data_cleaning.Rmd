@@ -20,16 +20,33 @@ pacman::p_load(reactable, tidyverse, plotly)
 
 ### 1.1. Metadata
 
-1.  **DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa).xlsx**: An Excel file separated by sheets for every region (focused on Lombok and Sumbawa, but also including Manado and Papua). Within the excel file there are information about ongoing WGS preparation for troublematic samples (the "need confirmation" sheets)
-2.  **Data WGS_Lombok.xlsx**: An information storage for in silico WGS results for Lombok samples (Sumbawa is not available yet)
+Two datasheets were shared with me on 11 March 2025, consisting of epiData (mixed with the ongoing workLab & workWGS information); I re-downloaded the data on 25 March 2025 and clarify the content on 26 March 2025 (denoted as \_ver3).
 
-I found "frameshift mutation" in dataframe Lombok (possibly because WGS data are updated but previous WGS data were still denoted as "N/A"). I cleaned up the data directly from google sheet on 17 March 2025. I re-download the data and conduct data cleaning analyses.
+1.  **DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa).xlsx**: An Excel file separated by sheets for every region (focused on Lombok and Sumbawa, but also including Manado and Papua). There are information about ongoing WGS preparation for problematic samples (the "need confirmation" sheets)
+2.  **Data WGS_Lombok.xlsx**: An information storage for *in silico* WGS results for Lombok samples (Sumbawa is not available yet)
+
+I found "frameshift mutation" in dataframe Lombok (possibly because WGS data are updated but previous WGS data were still denoted as "N/A"). And double ID for LBK_044; possibly caused by a live data updated by the lab team during laboratory analysis. I cleaned up the data directly from google sheet on 17 March 2025 and conducted data cleaning analyses locally.
 
 ```{R}
 knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-17 12-41-09.png")
-
-
 ```
+
+Value corrections (typographical errors) and other calculations during vaccination (HiB & PCV13)
+
+```{R}
+knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-24 10-35-33.png")
+knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-24 10-37-38.png")
+```
+
+Missing value (NAs) imputation:
+
+```{R}
+knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-23 13-18-10.png")
+knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-23 13-27-18.png")
+knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-23 13-27-37.png")
+```
+
+For genomic data, I generate new ID called "dc_id" for fixing 49 ID names with naming inconsistencies.
 
 ### 1.2. Fasta data
 
