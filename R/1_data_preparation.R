@@ -1,7 +1,7 @@
 library(tidyverse)
 
 # Data cleaning process for epiData ############################################
-df_epi_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver3.xlsx",
+df_epi_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver4.xlsx",
                                  sheet = "Lombok") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub(" ", "_", SPECIMEN_ID),
@@ -27,7 +27,7 @@ df_epi_lombok_duplicated_ids <- df_epi_lombok %>%
 write.csv(df_epi_lombok, "raw_data/temporary_df_epi_lombok.csv",
           row.names = F)
 
-df_epi_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver3.xlsx",
+df_epi_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver4.xlsx",
                                     sheet = "Sumbawa") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub("-", "_", SPECIMEN_ID),
@@ -255,7 +255,7 @@ df_epi_clean <- df_epi_merged %>%
       house_window %in% c("bambu", "kayu") ~ "bambu/kayu",
       TRUE ~ house_window
     )
-  )
+  ) %>% 
   # combine to available fasta
   dplyr::left_join(read.table("raw_data/test_available_fasta_renamed.txt", header = FALSE) %>% 
                      dplyr::mutate(workFasta_check = "Accepted_by_DC",
@@ -440,7 +440,8 @@ df_epi_coded <- df_epi_clean %>%
                                  levels = c("1 and below", "more than 1")),
     final_pneumo_decision = factor(final_pneumo_decision,
                                       levels = c("negative", "positive"))
-  )
+  ) %>% 
+  dplyr::select(-contains("work"))
 
 # check columns with NA
 cols_with_na <- colnames(df_epi_coded)[colSums(is.na(df_epi_coded)) > 0]
@@ -477,8 +478,10 @@ write.csv(df_epi_coded, "inputs/epiData.csv")
 
 
 # Data cleaning process for workLab ############################################
+# Generate available fasta list first!
+
 df_workLab <- dplyr::bind_rows(
-  readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver3.xlsx",
+  readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver4.xlsx",
                      sheet = "Lombok") %>% 
     dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
     dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
@@ -488,7 +491,7 @@ df_workLab <- dplyr::bind_rows(
                   across(where(is.character), ~ if_else(. == "-", "tidak", .))) %>% 
     dplyr::select(2:13, area)
   ,
-  readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver3.xlsx",
+  readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver4.xlsx",
                      sheet = "Sumbawa") %>% 
     dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
     dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
@@ -505,8 +508,8 @@ df_workLab <- dplyr::bind_rows(
     workLab_culture_notes = notes,
     workLab_optochin = optochin,
     workWGS_success_failed = wgs_result11,
-    workWGS_species = wgs_result12,
-    workWGS_serotype = serotype_wgs
+    workWGS_species = wgs_result12, # data can't be trusted; use WGS list instead
+    workWGS_serotype = serotype_wgs # data can't be trusted; use WGS list instead
   ) %>% 
   # mutate all "N/A" values
   dplyr::mutate(across(where(is.character), ~ na_if(., "N/A"))) %>% 
@@ -519,6 +522,8 @@ df_workLab <- dplyr::bind_rows(
                    ,
                    by = "specimen_id"
   ) %>% 
+  dplyr::select(-workWGS_species, -workWGS_serotype,
+                -kode_1_positif_2_negatif_3_not_yet) %>% 
   # view() %>% 
   glimpse()
 
@@ -526,7 +531,7 @@ write.csv(df_workLab, "inputs/workLab_data.csv")
 
 # Generate report for fasta files not accepted by DC (yet)
 fasta_missing_report <- df_workLab %>% 
-  dplyr::filter(workWGS_species == "Streptococcus pneumoniae" & is.na(file_check)) %>% 
+  dplyr::filter(workWGS_species == "Streptococcus pneumoniae" & is.na(workFasta_file_check)) %>% 
   view() %>% 
   glimpse()
 
@@ -538,25 +543,23 @@ write.table(fasta_missing_report %>%
 
 # Data cleaning process for genData ############################################
 # Apparently "No Isolat" is based on the first line inside <cat *.fasta>.
-# I extract "No Isolat" on terminal:
-# for f in *.fa*; do  
-# awk -v fname="$f" '/^>/ {print fname "," substr($0,2)}' "$f"
-# done > /home/ron/pneumo_2025_lesserSundas/raw_data/test_fasta_headers.csv
+# I extract "No Isolat" on terminal; see 0_temporary_script
 
 # BE CAREFUL while inspecting Data WGS_Lombok.xlsx;
 # 49 "No Isolat" with joined <location ID> & <participat ID>
-# I manually edit this inconsistencies
+# I manually edit these inconsistencies
 
 df_gen_all <- dplyr::left_join(
   read.csv("raw_data/test_fasta_headers.csv", header = F) %>% 
     stats::setNames(c("workFasta_name_with_extension", "workFasta_genome_name")) %>% 
     dplyr::mutate(workFasta_name = gsub("\\.fasta$", "", workFasta_name_with_extension))
   ,
-  readxl::read_excel("raw_data/Data WGS_Lombok_ver3.xlsx") %>% 
+  readxl::read_excel("raw_data/Data WGS_Lombok_ver4.xlsx") %>% 
     dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
     dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
     dplyr::rename_all(~ paste0("workWGS_", .)) %>% 
     dplyr::rename(
+      workWGS_species_pw = workWGS_organism_name,
       workWGS_MLST_pw_ST = workWGS_sequence_type,
       workWGS_MLST_pw_aroe = workWGS_aroe,
       workWGS_MLST_pw_gdh = workWGS_gdh,
@@ -570,11 +573,18 @@ df_gen_all <- dplyr::left_join(
   join_by("workFasta_name" == "workWGS_dc_id")
   ) %>% 
   dplyr::left_join(
+    df_workLab %>% 
+      dplyr::select(workFasta_name_with_extension, workFasta_file_check,
+                    workWGS_success_failed)
+    ,
+    by = "workFasta_name_with_extension"
+  ) %>% 
+  dplyr::left_join(
     read.csv("raw_data/result_mlst/mlst_results.csv", header = F, sep = "\t") %>% 
-      stats::setNames(c("workFasta_name_with_extension", "sp", "workWGS_MLST_dc_ST",
+      stats::setNames(c("workFasta_name_with_extension", "workWGS_MLST_dc_species", "workWGS_MLST_dc_ST",
                         "workWGS_MLST_dc_aroe", "workWGS_MLST_dc_gdh", "workWGS_MLST_dc_gki",
                         "workWGS_MLST_dc_recp", "workWGS_MLST_dc_spi", "workWGS_MLST_dc_xpt", "workWGS_MLST_dc_ddl")) %>% 
-      dplyr::mutate(workFasta_name_with_extension = gsub("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta/", "", workFasta_name_with_extension),
+      dplyr::mutate(workFasta_name_with_extension = gsub("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", "", workFasta_name_with_extension),
                     workWGS_MLST_dc_aroe = gsub("aroE\\(", "", workWGS_MLST_dc_aroe) %>% gsub("\\)$", "", .),
                     workWGS_MLST_dc_gdh = gsub("gdh\\(", "", workWGS_MLST_dc_gdh) %>% gsub("\\)$", "", .),
                     workWGS_MLST_dc_gki = gsub("gki\\(", "", workWGS_MLST_dc_gki) %>% gsub("\\)$", "", .),
@@ -588,7 +598,12 @@ df_gen_all <- dplyr::left_join(
   ) %>% 
   dplyr::left_join(
     read.csv("raw_data/result_assembly_stats/compiled_assembly_stats.csv") %>% 
-      dplyr::rename_all(~ paste0("workWGS_stats_", .))
+      dplyr::rename_all(~ paste0("workWGS_stats_", .)) %>% 
+      dplyr::mutate(workWGS_stats_pneumo_cutoff = case_when(
+        workWGS_stats_sum >= 1900000 & workWGS_stats_sum <= 2300000 ~ "predicted pneumo",
+        workWGS_stats_sum < 1900000 ~ "< 1.9 Mb",
+        workWGS_stats_sum > 2300000 ~ "> 2.3 Mb",
+      ))
     ,
     join_by("workFasta_name_with_extension" == "workWGS_stats_my_ID")
   ) %>% 
@@ -602,7 +617,38 @@ df_gen_all <- dplyr::left_join(
   dplyr::mutate(specimen_id = gsub("Streptococcus_pneumoniae_", "", workFasta_name)) %>% 
   glimpse()
 
-write.csv(df_gen_all, "inputs/genData.csv")
+write.csv(df_gen_all, "inputs/genData_all.csv")
+
+# Species decision based on workWGS_stats_pneumo_cutoff = "predicted pneumo";
+# NOT pneumo species from pathogenWatch OR MLST!
+df_gen_all_sp_comparison <- df_gen_all %>% 
+  dplyr::select(workFasta_name_with_extension,
+                workFasta_file_check,
+                workWGS_success_failed,
+                workWGS_species_pw, workWGS_MLST_dc_species,
+                workWGS_stats_sum, workWGS_stats_ave, workWGS_stats_N50,
+                workWGS_stats_pneumo_cutoff,
+                workWGS_kity_top_hits, workWGS_kity_rag_status) %>% 
+  view()
+
+
+# Isolate non-pneumo fasta files & pneumo fasta files
+fasta_non_pneumo <- df_gen_all %>% 
+  dplyr::filter(workWGS_stats_pneumo_cutoff != "predicted pneumo") %>% 
+  dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
+  dplyr::select(fasta_name)
+
+write.table(fasta_non_pneumo, "inputs/list_fasta_non_pneumo.txt",
+            row.names = F, col.names = F, quote = F)
+
+fasta_predicted_pneumo <- df_gen_all %>% 
+  dplyr::filter(workWGS_stats_pneumo_cutoff == "predicted pneumo") %>% 
+  dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
+  dplyr::select(fasta_name)
+
+write.table(fasta_predicted_pneumo, "inputs/list_fasta_predicted_pneumo.txt",
+            row.names = F, col.names = F, quote = F)
+
 
 # Test duplicated ID
 df_gen_all_duplicated_ids <- df_gen_all %>% 
@@ -620,7 +666,7 @@ df_gen_all_duplicated_ids <- df_gen_all %>%
 workLab_test <- df_workLab %>% 
   dplyr::left_join(
     df_gen_all %>% 
-      dplyr::select(workFasta_name_with_extension, 10:12)
+      dplyr::select(workFasta_name_with_extension, 7, 10:12)
     ,
     by = "workFasta_name_with_extension"
   ) %>% 
