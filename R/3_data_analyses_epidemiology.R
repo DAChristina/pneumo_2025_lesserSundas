@@ -1,7 +1,7 @@
 library(tidyverse)
 source("global/fun.R")
 
-df_epi_coded <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned_coded.csv") %>% 
+df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>% 
   dplyr::select(-X, -specimen_id) %>% 
   # conduct corrections for supposedly NUMERICAL and FACTOR (not ordered) columns!
   dplyr::mutate(
@@ -16,6 +16,9 @@ df_epi_coded <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combin
     hospitalised_last_3mo_n = as.numeric(hospitalised_last_3mo_n),
     healthcareVisit_last_3mo_n = as.numeric(healthcareVisit_last_3mo_n), # 1 "unknown" is replaced as NA
     # healthcareVisit_last_3mo_n = dplyr::na_if(healthcareVisit_last_3mo_n, "unknown")
+    
+    vaccination_hibpentavalent_dc_n = as.numeric(vaccination_hibpentavalent_dc_n),
+    vaccination_pcv13_dc_n = as.numeric(vaccination_pcv13_dc_n),
     area = as.factor(area),
     sex = as.factor(sex),
     tribe = as.factor(tribe),
@@ -26,9 +29,9 @@ df_epi_coded <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combin
     contact_cigarettes = as.factor(contact_cigarettes),
     contact_cooking_fuel = as.factor(contact_cooking_fuel),
     contact_cooking_place = as.factor(contact_cooking_place),
-    house_building = as.factor(house_building),
-    house_roof = as.factor(house_roof),
-    house_window = as.factor(house_window),
+    house_building_regroup = as.factor(house_building_regroup),
+    house_roof_regroup = as.factor(house_roof_regroup),
+    house_window_regroup = as.factor(house_window_regroup),
     hospitalised_last_3mo = as.factor(hospitalised_last_3mo),
     healthcareVisit_last_3mo = as.factor(healthcareVisit_last_3mo),
     sickness_past3days_fever = as.factor(sickness_past3days_fever),
@@ -46,18 +49,30 @@ col_map <- c(
   "negative" = "indianred2"
 )
 
-column_names <- setdiff(names(df_epi_coded), "final_pneumo_decision")
+column_names <- setdiff(names(df_epi), "final_pneumo_decision")
 
 # Test epiFunction ehehe
 # try OR report works only for categorical data
-df_epi_coded_chars <- df_epi_coded %>% 
+df_epi_chars <- df_epi %>% 
   dplyr::select(where(~ !all(is.na(.))), # NAs in workLab, workFasta & not interesting columns
+                -contains("hospitalised"), # NAs in workLab, workFasta & not interesting columns
+                -contains("healthcareVisit"), # NAs in workLab, workFasta & not interesting columns
+                -sickness_past24h, # NAs in workLab, workFasta & not interesting columns
                 -sickness_past3days_fever_howManyDays, # conflicted values with fever column
-                -contains("coded_"),
-                -contains("work"),
-                -where(is.character))
+                -age_month, # too diverse, use age_year instead
+                -where(is.character)) %>% 
+  dplyr::filter(vaccination_pcv13_dc_n >= 1 & vaccination_pcv13_dc_n <= 4) # omit count value == 1
 
-or_matrix_all <- generate_or_matrix_report(df_input = df_epi_coded_chars,
+cols_with_na_sums <- df_epi_chars %>%
+  dplyr::summarise(across(everything(), ~ sum(is.na(.)))) %>% 
+  # transpose
+  tidyr::pivot_longer(everything(),
+                      names_to = "columns", values_to = "NAs") %>% 
+  dplyr::filter(!str_detect(columns, "work"),
+                NAs != 0) %>% 
+  glimpse()
+
+or_matrix_all <- generate_or_matrix_report(df_input = df_epi_chars,
                                            binary_disease = "final_pneumo_decision")
 
 or_matrix_table_report <- dplyr::full_join(
@@ -94,7 +109,7 @@ or_matrix_table_report <- dplyr::full_join(
 
 
 # try glm OR report
-or_logistic_all <- generate_univar_report(df_input = df_epi_coded_chars,
+or_logistic_all <- generate_univar_report(df_input = df_epi_chars,
                                                    binary_disease = "final_pneumo_decision")
 
 or_logistic_model_report <- purrr::imap_dfr(or_logistic_all, ~{
@@ -131,10 +146,9 @@ or_logistic_model_report <- purrr::imap_dfr(or_logistic_all, ~{
 
 
 # try glm multivariable OR report
-or_multivariable_all <- generate_multivar_report(df_input = df_epi_coded_chars, binary_disease = "final_pneumo_decision")
-
-or_multivariable_all3 <- generate_glm_multivariable_report(df_input = df_epi_coded_chars, binary_disease = "final_pneumo_decision")
 
 
+or_multivariable_all <- generate_multivar_report(df_input = df_epi_chars, binary_disease = "final_pneumo_decision")
+or_multivariable_all
 
 

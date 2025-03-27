@@ -143,30 +143,6 @@ df_epi_clean <- df_epi_merged %>%
                 sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd_dc
                 ) %>% 
   dplyr::mutate(
-    final_pneumo_decision = case_when(
-      wgs_result12 == "streptococcus pneumoniae" ~ "positive",
-      # optochin == "s" | optochin == "?" ~ "positive", # "s" can be negative based on WGS result
-      optochin == "?" ~ "positive",
-      optochin == "r" ~ "negative", # correct notes result based on optochin & culture result
-      s_pneumoniae_culture_result == "neg" ~ "negative",
-      s_pneumoniae_suspect_culture_colony == "yes" & s_pneumoniae_culture_result == "pos" & wgs_result12 == "streptococcus pneumoniae" ~ "positive",
-      s_pneumoniae_suspect_culture_colony == "yes" & s_pneumoniae_culture_result == "pos" & wgs_result12 != "streptococcus pneumoniae" ~ "negative",  # OR "Failed_to_be_extracted"?
-      s_pneumoniae_suspect_culture_colony == "yes" & wgs_result12 != "streptococcus pneumoniae" ~ "negative",  # OR "Failed_to_be_extracted"?
-      TRUE ~ s_pneumoniae_culture_result
-    ),
-    final_pneumo_decision = case_when(
-      final_pneumo_decision == "neg" ~ "negative",
-      is.na(final_pneumo_decision) ~ "negative",
-      TRUE ~ final_pneumo_decision  # ensure other values remain unchanged
-    )
-  ) %>% 
-  # correct final_pneumo_decision
-  dplyr::mutate(
-    final_pneumo_decision = case_when(
-      final_pneumo_decision == "pos" ~ "positive",
-      TRUE ~ final_pneumo_decision
-    )) %>% 
-  dplyr::mutate(
     # generate age classification
     age_year = case_when(
       age_month < 13 ~ 1,
@@ -437,9 +413,7 @@ df_epi_coded <- df_epi_clean %>%
     antibiotic_past3days = as.factor(antibiotic_past3days),
     antibiotic_past1mo = as.factor(antibiotic_past1mo),
     age_year_2groups = factor(age_year_2groups,
-                                 levels = c("1 and below", "more than 1")),
-    final_pneumo_decision = factor(final_pneumo_decision,
-                                      levels = c("negative", "positive"))
+                                 levels = c("1 and below", "more than 1"))
   ) %>% 
   dplyr::select(-contains("work"))
 
@@ -501,6 +475,8 @@ df_workLab <- dplyr::bind_rows(
                   across(where(is.character), ~ if_else(. == "-", "tidak", .))) %>% 
     dplyr::select(2:13, area)
 ) %>% 
+  dplyr::mutate_all(tolower) %>% 
+  dplyr::mutate(specimen_id = toupper(specimen_id)) %>% 
   # rename to simplify my life
   dplyr::rename(
     workLab_culture_suspect = s_pneumoniae_suspect_culture_colony,
@@ -572,10 +548,12 @@ df_gen_all <- dplyr::left_join(
   ,
   join_by("workFasta_name" == "workWGS_dc_id")
   ) %>% 
+  # generate specimen_id
+  dplyr::mutate(specimen_id = gsub("Streptococcus_pneumoniae_", "", workFasta_name)) %>% 
   dplyr::left_join(
     df_workLab %>% 
-      dplyr::select(workFasta_name_with_extension, workFasta_file_check,
-                    workWGS_success_failed)
+      dplyr::select(workFasta_name_with_extension, workWGS_success_failed,
+                    workFasta_file_check)
     ,
     by = "workFasta_name_with_extension"
   ) %>% 
@@ -600,7 +578,7 @@ df_gen_all <- dplyr::left_join(
     read.csv("raw_data/result_assembly_stats/compiled_assembly_stats.csv") %>% 
       dplyr::rename_all(~ paste0("workWGS_stats_", .)) %>% 
       dplyr::mutate(workWGS_stats_pneumo_cutoff = case_when(
-        workWGS_stats_sum >= 1900000 & workWGS_stats_sum <= 2300000 ~ "predicted pneumo",
+        workWGS_stats_sum >= 1900000 & workWGS_stats_sum <= 2300000 ~ "predicted pure pneumo",
         workWGS_stats_sum < 1900000 ~ "< 1.9 Mb",
         workWGS_stats_sum > 2300000 ~ "> 2.3 Mb",
       ))
@@ -613,13 +591,11 @@ df_gen_all <- dplyr::left_join(
     ,
     join_by("workFasta_name" == "workWGS_kity_sampleid")
   ) %>% 
-  # generate specimen_id
-  dplyr::mutate(specimen_id = gsub("Streptococcus_pneumoniae_", "", workFasta_name)) %>% 
   glimpse()
 
 write.csv(df_gen_all, "inputs/genData_all.csv")
 
-# Species decision based on workWGS_stats_pneumo_cutoff = "predicted pneumo";
+# Species decision based on workWGS_stats_pneumo_cutoff = "predicted pure pneumo";
 # NOT pneumo species from pathogenWatch OR MLST!
 df_gen_all_sp_comparison <- df_gen_all %>% 
   dplyr::select(workFasta_name_with_extension,
@@ -634,7 +610,7 @@ df_gen_all_sp_comparison <- df_gen_all %>%
 
 # Isolate non-pneumo fasta files & pneumo fasta files
 fasta_non_pneumo <- df_gen_all %>% 
-  dplyr::filter(workWGS_stats_pneumo_cutoff != "predicted pneumo") %>% 
+  dplyr::filter(workWGS_stats_pneumo_cutoff != "predicted pure pneumo") %>% 
   dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
   dplyr::select(fasta_name)
 
@@ -642,7 +618,7 @@ write.table(fasta_non_pneumo, "inputs/list_fasta_non_pneumo.txt",
             row.names = F, col.names = F, quote = F)
 
 fasta_predicted_pneumo <- df_gen_all %>% 
-  dplyr::filter(workWGS_stats_pneumo_cutoff == "predicted pneumo") %>% 
+  dplyr::filter(workWGS_stats_pneumo_cutoff == "predicted pure pneumo") %>% 
   dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
   dplyr::select(fasta_name)
 
@@ -662,7 +638,106 @@ df_gen_all_duplicated_ids <- df_gen_all %>%
   )) %>% 
   view()
 
-# Test data similarities from df_workLab & df_gen_all ##########################
+# Generate final_pneumo_decision from df_workLab & df_gen_all ##################
+df_final_pneumo <- read.csv("inputs/workLab_data.csv") %>% 
+  dplyr::select(1:11) %>% 
+  dplyr::left_join(
+    read.csv("inputs/genData_all.csv") %>% 
+      dplyr::select(specimen_id,
+                    # workWGS_success_failed, # trust workWGS_success_failed from workLab_data
+                    workWGS_species_pw, workWGS_MLST_dc_species,
+                    workWGS_stats_pneumo_cutoff,
+                    workWGS_kity_top_hits, workWGS_kity_rag_status)
+    ,
+    by = "specimen_id"
+  ) %>% 
+  dplyr::mutate(
+    final_pneumo_decision = case_when(
+      workWGS_species_pw == "streptococcus pneumoniae" | workWGS_MLST_dc_species == "spneumoniae" ~ "positive",
+      # optochin == "s" | optochin == "?" ~ "positive", # "s" can be negative based on WGS result
+      workLab_optochin == "?" ~ "positive",
+      workLab_optochin == "r" ~ "negative", # correct notes result based on optochin & culture result
+      workLab_culture_result == "neg" ~ "negative",
+      workLab_culture_suspect == "yes" & workLab_culture_result == "pos" & workWGS_species_pw == "streptococcus pneumoniae" ~ "positive",
+      workLab_culture_suspect == "yes" & workLab_culture_result == "pos" & workWGS_species_pw != "streptococcus pneumoniae" ~ "negative",  # OR "Failed_to_be_extracted"?
+      workLab_culture_suspect == "yes" & workWGS_species_pw != "streptococcus pneumoniae" ~ "negative",  # OR "Failed_to_be_extracted"?
+      TRUE ~ workLab_culture_result
+    ),
+    final_pneumo_decision = case_when(
+      final_pneumo_decision == "neg" ~ "negative",
+      is.na(final_pneumo_decision) ~ "negative",
+      TRUE ~ final_pneumo_decision  # ensure other values remain unchanged
+    )
+  ) %>%
+  # correct final_pneumo_decision
+  dplyr::mutate(
+    final_pneumo_decision = case_when(
+      final_pneumo_decision == "pos" ~ "positive",
+      TRUE ~ final_pneumo_decision
+    )
+  ) %>% 
+  dplyr::mutate(
+    final_pneumo_decision = case_when(
+      final_pneumo_decision == "pos" ~ "positive",
+      TRUE ~ final_pneumo_decision
+    )
+  ) %>%
+  glimpse()
+
+write.csv(df_final_pneumo, "inputs/final_pneumo_decision.csv")
+
+
+df_final_pneumo_group <- df_final_pneumo %>% 
+  dplyr::group_by(workLab_culture_suspect, workLab_optochin,
+                  workLab_culture_result, workLab_culture_notes,
+                  workWGS_MLST_dc_species, workWGS_species_pw,
+                  final_pneumo_decision
+                  ) %>% 
+  dplyr::summarise(count = n()) %>% 
+  view()
+
+# combine final_pneumo_decision to epiData
+final_epiData <- read.csv("inputs/epiData.csv") %>% 
+  dplyr::left_join(
+    read.csv("inputs/final_pneumo_decision.csv") %>% 
+      dplyr::select(specimen_id, final_pneumo_decision)
+    ,
+    by = "specimen_id"
+  ) %>% 
+  dplyr::select(-X.1, -X,
+                -house_roof, -house_building, -house_window, # re-grouped based on materials
+                -vaccination_hibpentavalent_n, # corrected values based on dates
+                -vaccination_pcv13_n)
+
+write.csv(final_epiData, "inputs/epiData_with_final_pneumo_decision.csv")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 workLab_test <- df_workLab %>% 
   dplyr::left_join(
     df_gen_all %>% 

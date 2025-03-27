@@ -1,7 +1,7 @@
 library(tidyverse)
 
 # Data analyses process for epiData ############################################
-df_epi_coded <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned_coded.csv") %>% 
+df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>% 
   dplyr::select(-X, -specimen_id) %>% 
   # conduct corrections for supposedly NUMERICAL and FACTOR (not ordered) columns!
   dplyr::mutate(
@@ -16,9 +16,8 @@ df_epi_coded <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combin
     hospitalised_last_3mo_n = as.numeric(hospitalised_last_3mo_n),
     healthcareVisit_last_3mo_n = as.numeric(healthcareVisit_last_3mo_n), # 1 "unknown" is replaced as NA
     # healthcareVisit_last_3mo_n = dplyr::na_if(healthcareVisit_last_3mo_n, "unknown")
-    vaccination_hibpentavalent_n = as.numeric(vaccination_hibpentavalent_n),
+    
     vaccination_hibpentavalent_dc_n = as.numeric(vaccination_hibpentavalent_dc_n),
-    vaccination_pcv13_n = as.numeric(vaccination_pcv13_n),
     vaccination_pcv13_dc_n = as.numeric(vaccination_pcv13_dc_n),
     area = as.factor(area),
     sex = as.factor(sex),
@@ -30,9 +29,9 @@ df_epi_coded <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combin
     contact_cigarettes = as.factor(contact_cigarettes),
     contact_cooking_fuel = as.factor(contact_cooking_fuel),
     contact_cooking_place = as.factor(contact_cooking_place),
-    house_building = as.factor(house_building),
-    house_roof = as.factor(house_roof),
-    house_window = as.factor(house_window),
+    house_building_regroup = as.factor(house_building_regroup),
+    house_roof_regroup = as.factor(house_roof_regroup),
+    house_window_regroup = as.factor(house_window_regroup),
     hospitalised_last_3mo = as.factor(hospitalised_last_3mo),
     healthcareVisit_last_3mo = as.factor(healthcareVisit_last_3mo),
     sickness_past3days_fever = as.factor(sickness_past3days_fever),
@@ -50,10 +49,10 @@ col_map <- c(
   "negative" = "indianred2"
 )
 
-column_names <- setdiff(names(df_epi_coded), "final_pneumo_decision")
+column_names <- setdiff(names(df_epi), "final_pneumo_decision")
 
 for (column in column_names){
-  df_summary <- df_epi_coded %>% 
+  df_summary <- df_epi %>% 
     dplyr::group_by(!!sym(column), final_pneumo_decision) %>%  # Use !!sym(column) to reference column
     dplyr::summarise(count = n(), .groups = "drop")
   
@@ -65,6 +64,8 @@ for (column in column_names){
                        aes(x = !!sym(column), y = count,
                            fill = final_pneumo_decision)) + 
     geom_bar(position = "stack", stat = "identity") + 
+    geom_text(aes(label = count), 
+              position = position_stack(vjust = 1.05)) +
     scale_fill_manual(values = c(col_map)) +
     labs(y = "Count",
          x = "") + 
@@ -90,8 +91,8 @@ for (column in column_names){
                            labels = c("A", "B"))
   
   # Inspect weird distributions
-  if (is.numeric(df_epi_coded[[column]])) {
-    predict <- ggplot(df_epi_coded,
+  if (is.numeric(df_epi[[column]])) {
+    predict <- ggplot(df_epi,
                       aes(x = !!sym(column), # convert 1-2 to proportion
                           y = as.numeric(final_pneumo_decision)-1)) +
       geom_point() +
@@ -107,7 +108,7 @@ for (column in column_names){
     dev.off()
     
   } else {
-    png(file = f_path, width = 23, height = 5, unit = "cm", res = 600)
+    png(file = f_path, width = 23, height = 12, unit = "cm", res = 600)
     print(p1)
     dev.off()
     
