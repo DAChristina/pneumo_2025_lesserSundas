@@ -43,14 +43,6 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
                                    levels = c("negative", "positive"))
   )
 
-col_map <- c(
-  # final_pneumo_decision
-  "positive" = "steelblue",
-  "negative" = "indianred2"
-)
-
-column_names <- setdiff(names(df_epi), "final_pneumo_decision")
-
 # Test epiFunction ehehe
 # try OR report works only for categorical data
 df_epi_chars <- df_epi %>% 
@@ -59,7 +51,16 @@ df_epi_chars <- df_epi %>%
                 -contains("healthcareVisit"), # NAs in workLab, workFasta & not interesting columns
                 -sickness_past24h, # NAs in workLab, workFasta & not interesting columns
                 -sickness_past3days_fever_howManyDays, # conflicted values with fever column
-                -age_month, # too diverse, use age_year instead
+                # imbalanced values
+                -breastMilk_given,
+                # too diverse, use other grouping columns instead
+                -nTotal_people,
+                -nTotal_child_5yo_andBelow,
+                -n_child_1yo_andBelow,
+                -n_child_1to2yo,
+                -n_child_2to4yo,
+                -nTotal_child_5yo_andBelow_sleep,
+                -age_month,
                 -where(is.character)) %>% 
   dplyr::filter(vaccination_pcv13_dc_n >= 1 & vaccination_pcv13_dc_n <= 4) # omit count value == 1
 

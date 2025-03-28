@@ -54,7 +54,8 @@ column_names <- setdiff(names(df_epi), "final_pneumo_decision")
 for (column in column_names){
   df_summary <- df_epi %>% 
     dplyr::group_by(!!sym(column), final_pneumo_decision) %>%  # Use !!sym(column) to reference column
-    dplyr::summarise(count = n(), .groups = "drop")
+    dplyr::summarise(count = n(), .groups = "drop") %>% 
+    glimpse()
   
   f_name <- paste0("barplot_", column, ".png")
   f_path <- file.path("pictures/2_clean_data_descriptive", paste0(f_name))
