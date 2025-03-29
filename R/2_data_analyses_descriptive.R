@@ -2,7 +2,7 @@ library(tidyverse)
 
 # Data analyses process for epiData ############################################
 df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>% 
-  dplyr::select(-X, -specimen_id) %>% 
+  dplyr::select(-specimen_id) %>% 
   # conduct corrections for supposedly NUMERICAL and FACTOR (not ordered) columns!
   dplyr::mutate(
     age_month = as.numeric(age_month),
@@ -39,9 +39,18 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     antibiotic_past1mo = as.factor(antibiotic_past1mo),
     age_year_2groups = factor(age_year_2groups,
                               levels = c("1 and below", "more than 1")),
+    nTotal_people_regroup = factor(nTotal_people_regroup,
+                                   levels = c("1-3 (low)", "4-6 (moderate)", ">7 (high)")),
+    nTotal_child_5yo_andBelow_regroup = factor(nTotal_child_5yo_andBelow_regroup,
+                                               levels = c("0", "1-4")),
+    nTotal_child_5yo_andBelow_sleep_regroup = factor(nTotal_child_5yo_andBelow_sleep_regroup,
+                                                     levels = c("0", "1-3")),
+    vaccination_pcv13_dc_n_regroup = factor(vaccination_pcv13_dc_n_regroup,
+                                            levels = c("1-2 mandatory", "3-4 booster")),
     final_pneumo_decision = factor(final_pneumo_decision,
                                    levels = c("negative", "positive"))
-  )
+  ) %>% 
+  glimpse()
 
 col_map <- c(
   # final_pneumo_decision
@@ -50,7 +59,6 @@ col_map <- c(
 )
 
 column_names <- setdiff(names(df_epi), "final_pneumo_decision")
-
 for (column in column_names){
   df_summary <- df_epi %>% 
     dplyr::group_by(!!sym(column), final_pneumo_decision) %>%  # Use !!sym(column) to reference column

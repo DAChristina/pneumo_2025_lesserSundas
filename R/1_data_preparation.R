@@ -215,21 +215,37 @@ df_epi_clean <- df_epi_merged %>%
     vaccination_pcv13_dc_n = sudah_berapa_kali_anak_anda_diberi_pneumococcal_conjugate_vaccine_13_pcv13_vaksin_pneumokokus_vaksin_pneumokokus_konjugasi_vaksin_pneumokokus_ipd_dc
     
   ) %>% 
-  # generate final classifications from house_ info
+  # generate re-grouping imbalanced columns
   dplyr::mutate(
     house_roof_regroup = case_when(
       house_roof %in% c("batako", "beton", "genteng logam") ~ "others",
       TRUE ~ house_roof
     ),
     house_building_regroup = case_when(
-      house_building %in% c("anyaman bambu", "bambu") ~ "bambu",
       house_building %in% c("batu", "batu bata") ~ "batu bata",
-      house_building %in% c("kayu", "triplek") ~ "triplek",
+      house_building %in% c("anyaman bambu", "bambu", "kayu", "triplek") ~ "bambu/triplek",
       TRUE ~ house_building
     ),
     house_window_regroup = case_when(
-      house_window %in% c("bambu", "kayu") ~ "bambu/kayu",
+      house_window %in% c("bambu", "kayu", "tidak ada/terbuka") ~ "bambu/kayu/terbuka",
       TRUE ~ house_window
+    ),
+    nTotal_people_regroup = case_when(
+      is.na(nTotal_people) | nTotal_people < 4 ~ "1-3 (low)",
+      nTotal_people >= 4 & nTotal_people < 7 ~ "4-6 (moderate)",
+      nTotal_people >= 7 ~ ">7 (high)"
+    ),
+    nTotal_child_5yo_andBelow_regroup = case_when(
+      nTotal_child_5yo_andBelow == 0 ~ "0",
+      nTotal_child_5yo_andBelow >= 0 ~ "1-4"
+    ),
+    nTotal_child_5yo_andBelow_sleep_regroup = case_when(
+      nTotal_child_5yo_andBelow_sleep == 0 ~ "0",
+      nTotal_child_5yo_andBelow_sleep >= 0 ~ "1-3"
+    ),
+    vaccination_pcv13_dc_n_regroup = case_when(
+      vaccination_pcv13_dc_n < 3 ~ "1-2 mandatory",
+      vaccination_pcv13_dc_n >= 3 ~ "3-4 booster"
     )
   ) %>% 
   # combine to available fasta
@@ -243,7 +259,16 @@ df_epi_clean <- df_epi_merged %>%
                    by = "specimen_id"
   )
 
-write.csv(df_epi_clean, "raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned.csv")
+
+column_names <- setdiff(names(df_epi_clean), "workLab_culture_result")
+for (column in column_names){
+  df_summary <- df_epi_clean %>% 
+    dplyr::group_by(!!sym(column), workLab_culture_result) %>%
+    dplyr::summarise(count = n(), .groups = "drop") %>% 
+    glimpse()
+}
+
+write.csv(df_epi_clean, "raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row_cleaned.csv", row.names = F)
 
 # Generate numerically-coded values just to mimic the original survey result
 # And modify columns into numeric or factor
@@ -375,46 +400,6 @@ df_epi_coded <- df_epi_clean %>%
   #   )
   # ) %>% 
   # conduct corrections for supposedly NUMERICAL and FACTOR (not ordered) columns!
-  dplyr::mutate(
-    age_month = as.numeric(age_month),
-    age_year = as.numeric(age_year),
-    nTotal_people = as.numeric(nTotal_people),
-    nTotal_child_5yo_andBelow = as.numeric(nTotal_child_5yo_andBelow),
-    n_child_1yo_andBelow = as.numeric(n_child_1yo_andBelow),
-    n_child_1to2yo = as.numeric(n_child_1to2yo),
-    n_child_2to4yo = as.numeric(n_child_2to4yo),
-    nTotal_child_5yo_andBelow_sleep = as.numeric(nTotal_child_5yo_andBelow_sleep),
-    hospitalised_last_3mo_n = as.numeric(hospitalised_last_3mo_n),
-    healthcareVisit_last_3mo_n = as.numeric(healthcareVisit_last_3mo_n), # 1 "unknown" is replaced as NA
-    # healthcareVisit_last_3mo_n = dplyr::na_if(healthcareVisit_last_3mo_n, "unknown")
-    vaccination_hibpentavalent_n = as.numeric(vaccination_hibpentavalent_n),
-    vaccination_hibpentavalent_dc_n = as.numeric(vaccination_hibpentavalent_dc_n),
-    vaccination_pcv13_n = as.numeric(vaccination_pcv13_n),
-    vaccination_pcv13_dc_n = as.numeric(vaccination_pcv13_dc_n),
-    area = as.factor(area),
-    sex = as.factor(sex),
-    tribe = as.factor(tribe),
-    breastMilk_given = as.factor(breastMilk_given),
-    breastMilk_still_being_given = as.factor(breastMilk_still_being_given),
-    contact_kindergarten = as.factor(contact_kindergarten),
-    contact_otherChildren = as.factor(contact_otherChildren),
-    contact_cigarettes = as.factor(contact_cigarettes),
-    contact_cooking_fuel = as.factor(contact_cooking_fuel),
-    contact_cooking_place = as.factor(contact_cooking_place),
-    house_building = as.factor(house_building),
-    house_building_regroup = as.factor(house_building_regroup),
-    house_roof = as.factor(house_roof),
-    house_roof_regroup = as.factor(house_roof_regroup),
-    house_window = as.factor(house_window),
-    house_window_regroup = as.factor(house_window_regroup),
-    hospitalised_last_3mo = as.factor(hospitalised_last_3mo),
-    healthcareVisit_last_3mo = as.factor(healthcareVisit_last_3mo),
-    sickness_past3days_fever = as.factor(sickness_past3days_fever),
-    antibiotic_past3days = as.factor(antibiotic_past3days),
-    antibiotic_past1mo = as.factor(antibiotic_past1mo),
-    age_year_2groups = factor(age_year_2groups,
-                                 levels = c("1 and below", "more than 1"))
-  ) %>% 
   dplyr::select(-contains("work"))
 
 # check columns with NA
@@ -448,7 +433,7 @@ filtered_0 <- df_epi_coded %>%
   dplyr::filter(healthcareVisit_last_3mo_n != 0)
 get_mmm(filtered_0$healthcareVisit_last_3mo_n)
 
-write.csv(df_epi_coded, "inputs/epiData.csv")
+write.csv(df_epi_coded, "inputs/epiData.csv", row.names = F)
 
 
 # Data cleaning process for workLab ############################################
@@ -489,6 +474,14 @@ df_workLab <- dplyr::bind_rows(
   ) %>% 
   # mutate all "N/A" values
   dplyr::mutate(across(where(is.character), ~ na_if(., "N/A"))) %>% 
+  # generate final workLab decision based on re-cultivation and other previous workLabs
+  dplyr::mutate(
+    workLab_culture_result_final = case_when(
+      workLab_culture_notes %in% c("no growth") ~ "neg",
+      grepl("white", workLab_culture_notes) ~ "neg",
+      TRUE ~ workLab_culture_result
+    )
+  ) %>% 
   dplyr::left_join(read.table("raw_data/test_available_fasta_renamed.txt", header = FALSE) %>% 
                      dplyr::mutate(workFasta_file_check = "Accepted_by_DC",
                                    specimen_id = gsub("Streptococcus_pneumoniae_", "", V1),
@@ -500,22 +493,22 @@ df_workLab <- dplyr::bind_rows(
   ) %>% 
   dplyr::select(-workWGS_species, -workWGS_serotype,
                 -kode_1_positif_2_negatif_3_not_yet) %>% 
-  # view() %>% 
+  view() %>%
   glimpse()
 
-write.csv(df_workLab, "inputs/workLab_data.csv")
+write.csv(df_workLab, "inputs/workLab_data.csv", row.names = F)
 
 # Generate report for fasta files not accepted by DC (yet)
-fasta_missing_report <- df_workLab %>% 
-  dplyr::filter(workWGS_species == "Streptococcus pneumoniae" & is.na(workFasta_file_check)) %>% 
-  view() %>% 
-  glimpse()
-
-write.csv(fasta_missing_report, "report/temporary_missing_fasta_list_in_DC.csv")
-write.table(fasta_missing_report %>% 
-              dplyr::select(specimen_id),
-            "report/temporary_missing_fasta_list_in_DC.txt",
-            row.names = F, quote = F)
+# fasta_missing_report <- df_workLab %>% 
+#   dplyr::filter(workWGS_species == "Streptococcus pneumoniae" & is.na(workFasta_file_check)) %>% 
+#   view() %>% 
+#   glimpse()
+# 
+# write.csv(fasta_missing_report, "report/temporary_missing_fasta_list_in_DC.csv")
+# write.table(fasta_missing_report %>% 
+#               dplyr::select(specimen_id),
+#             "report/temporary_missing_fasta_list_in_DC.txt",
+#             row.names = F, quote = F)
 
 # Data cleaning process for genData ############################################
 # Apparently "No Isolat" is based on the first line inside <cat *.fasta>.
@@ -587,13 +580,22 @@ df_gen_all <- dplyr::left_join(
   ) %>% 
   dplyr::left_join(
     read.csv("raw_data/result_pneumokity/Collated_result_data.csv") %>% 
-      dplyr::rename_all(~ paste0("workWGS_kity_", .))
+      dplyr::rename_all(~ paste0("workWGS_kity_", .)) %>% 
+      dplyr::mutate(
+        workWGS_kity_predicted_serotype = gsub("_", "/", workWGS_kity_predicted_serotype),
+        workWGS_kity_predicted_serotype_regroup = case_when(
+          grepl("Below",  workWGS_kity_predicted_serotype) ~ "acapsular",
+          grepl("Mixed",  workWGS_kity_predicted_serotype) ~ "mixed serotypes/serogroups",
+          workWGS_kity_predicted_serotype == "Serogroup/6/(6E)" ~ "6E",
+          TRUE ~ workWGS_kity_predicted_serotype
+        )
+      )
     ,
     join_by("workFasta_name" == "workWGS_kity_sampleid")
   ) %>% 
   glimpse()
 
-write.csv(df_gen_all, "inputs/genData_all.csv")
+write.csv(df_gen_all, "inputs/genData_all.csv", row.names = F)
 
 # Species decision based on workWGS_stats_pneumo_cutoff = "predicted pure pneumo";
 # NOT pneumo species from pathogenWatch OR MLST!
@@ -640,7 +642,7 @@ df_gen_all_duplicated_ids <- df_gen_all %>%
 
 # Generate final_pneumo_decision from df_workLab & df_gen_all ##################
 df_final_pneumo <- read.csv("inputs/workLab_data.csv") %>% 
-  dplyr::select(1:11) %>% 
+  dplyr::select(1:12) %>% 
   dplyr::left_join(
     read.csv("inputs/genData_all.csv") %>% 
       dplyr::select(specimen_id,
@@ -682,14 +684,16 @@ df_final_pneumo <- read.csv("inputs/workLab_data.csv") %>%
       TRUE ~ final_pneumo_decision
     )
   ) %>%
+  view() %>% 
   glimpse()
 
-write.csv(df_final_pneumo, "inputs/final_pneumo_decision.csv")
+write.csv(df_final_pneumo, "inputs/final_pneumo_decision.csv", row.names = F)
 
 
 df_final_pneumo_group <- df_final_pneumo %>% 
   dplyr::group_by(workLab_culture_suspect, workLab_optochin,
-                  workLab_culture_result, workLab_culture_notes,
+                  workLab_culture_result,
+                  workLab_culture_result_final, workLab_culture_notes,
                   workWGS_MLST_dc_species, workWGS_species_pw,
                   final_pneumo_decision
                   ) %>% 
@@ -704,12 +708,12 @@ final_epiData <- read.csv("inputs/epiData.csv") %>%
     ,
     by = "specimen_id"
   ) %>% 
-  dplyr::select(-X.1, -X,
+  dplyr::select(# -age_month, -age_year_2groups,
                 -house_roof, -house_building, -house_window, # re-grouped based on materials
                 -vaccination_hibpentavalent_n, # corrected values based on dates
                 -vaccination_pcv13_n)
 
-write.csv(final_epiData, "inputs/epiData_with_final_pneumo_decision.csv")
+write.csv(final_epiData, "inputs/epiData_with_final_pneumo_decision.csv", row.names = F)
 
 
 

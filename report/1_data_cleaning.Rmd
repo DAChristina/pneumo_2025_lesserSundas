@@ -20,9 +20,12 @@ pacman::p_load(reactable, tidyverse, plotly)
 
 ### 1.1. Metadata
 
-Two datasheets were shared with me on 11 March 2025, consisting of epiData (mixed with the ongoing workLab & workWGS information); I re-downloaded the data on 25 March 2025 and clarify the content on 26 March 2025 (denoted as \_ver3).
+Two datasheets were shared with me on 11 March 2025, consisting of epiData (mixed with the ongoing workLab & workWGS information); I re-downloaded the data on 27 March 2025 and clarify the content on 28-30 March 2025 (denoted as \_ver4).
 
 1.  **DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa).xlsx**: An Excel file separated by sheets for every region (focused on Lombok and Sumbawa, but also including Manado and Papua). There are information about ongoing WGS preparation for problematic samples (the "need confirmation" sheets)
+
+    I generate another df for the ongoing, updated workLab data.
+
 2.  **Data WGS_Lombok.xlsx**: An information storage for *in silico* WGS results for Lombok samples (Sumbawa is not available yet)
 
 I found "frameshift mutation" in dataframe Lombok (possibly because WGS data are updated but previous WGS data were still denoted as "N/A"). And double ID for LBK_044; possibly caused by a live data updated by the lab team during laboratory analysis. I cleaned up the data directly from google sheet on 17 March 2025 and conducted data cleaning analyses locally.
@@ -38,7 +41,7 @@ knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning
 knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-24 10-37-38.png")
 ```
 
-Missing value (NAs) imputation:
+Missing value (NAs) imputation using median or mode are cancelled based on common agreement at 26 March 2025; I let them empty and filter out the column for epiAnalyses:
 
 ```{R}
 knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-23 13-18-10.png")
