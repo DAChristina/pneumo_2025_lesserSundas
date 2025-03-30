@@ -169,75 +169,146 @@ df_epi_sorted <- df_epi %>%
                 ) %>% 
   glimpse()
 
-# denominator
-df_area <- df_epi_sorted %>% 
-  dplyr::mutate(across(-area, as.character)) %>%
-  tidyr::pivot_longer(cols = -area, names_to = "variable", values_to = "value") %>% 
-  dplyr::group_by(area, variable, value) %>% 
-  dplyr::summarise(count = n(), .groups = "drop") %>% 
+
+# compiled pneumo positive
+df_compiled_positivePneumo <- dplyr::left_join(
+  df_epi_sorted %>% 
+    dplyr::mutate(across(everything(), as.character)) %>% 
+    tidyr::pivot_longer(cols = everything(),
+                        names_to = "variable", values_to = "value") %>% 
+    dplyr::group_by(variable, value) %>% 
+    dplyr::summarise(count_all = n(), .groups = "drop")
+  ,
+  df_epi_sorted %>% 
+    dplyr::mutate(across(-final_pneumo_decision, as.character)) %>%
+    tidyr::pivot_longer(cols = -final_pneumo_decision, names_to = "variable", values_to = "value") %>% 
+    dplyr::group_by(variable, value, final_pneumo_decision) %>% 
+    dplyr::summarise(count_positivePneumo = n(), .groups = "drop") %>% 
+    dplyr::filter(final_pneumo_decision == "positive") %>% 
+    dplyr::select(-final_pneumo_decision)
+    ,
+  by = c("variable", "value")
+) %>% 
+  dplyr::mutate(
+    count_positivePneumo = case_when(
+      is.na(count_positivePneumo) ~ 0,
+      TRUE ~ count_positivePneumo
+      ),
+    percent = round(count_positivePneumo/count_all*100, 2),
+    report_positive_all = paste0(percent, "% (", count_positivePneumo, "/", count_all, ")")
+  ) %>% 
+  dplyr::select(-count_all,
+                -count_positivePneumo,
+                -percent) %>% 
+  # view() %>% 
+  glimpse()
+
+# compiled pneumo positive per-area
+df_area_positivePneumo <- dplyr::left_join(
+  df_epi_sorted %>% 
+    dplyr::mutate(across(-area, as.character)) %>%
+    tidyr::pivot_longer(cols = -area, names_to = "variable", values_to = "value") %>% 
+    dplyr::group_by(variable, value, area) %>% 
+    dplyr::summarise(count_perArea = n(), .groups = "drop")
+  ,
+  df_epi_sorted %>% 
+    dplyr::mutate(across(-c(area, final_pneumo_decision), as.character)) %>%  
+    tidyr::pivot_longer(cols = -c(area, final_pneumo_decision),
+                        names_to = "variable", values_to = "value") %>% 
+    dplyr::group_by(variable, value, area, final_pneumo_decision) %>% 
+    dplyr::summarise(count_positivePneumo = n(), .groups = "drop") %>% 
+    dplyr::filter(final_pneumo_decision == "positive") %>% 
+    dplyr::select(-final_pneumo_decision)
+  ,
+  by = c("variable", "value", "area")
+) %>% 
+  dplyr::mutate(
+    count_positivePneumo = case_when(
+      is.na(count_positivePneumo) ~ 0,
+      TRUE ~ count_positivePneumo
+    ),
+    percent = round(count_positivePneumo/count_perArea*100, 2),
+    report_positive_perArea = paste0(percent, "% (", count_positivePneumo, "/", count_perArea, ")")
+  ) %>% 
+  dplyr::select(-count_perArea,
+                -count_positivePneumo,
+                -percent) %>% 
+  tidyr::pivot_wider(names_from = area, 
+                     values_from = report_positive_perArea) %>% 
+  dplyr::rename(
+    report_positive_lombok = lombok,
+    report_positive_sumbawa = sumbawa
+  ) %>% 
+  # view() %>% 
+  glimpse()
+
+compile_positive_all <- dplyr::left_join(
+  df_compiled_positivePneumo, df_area_positivePneumo,
+  by = c("variable", "value")
+) %>% 
   view() %>% 
   glimpse()
 
-# numerator
-df_positivePneumo_area <- df_epi_sorted %>% 
-  dplyr::mutate(across(-c(area, final_pneumo_decision), as.character)) %>%  
-  tidyr::pivot_longer(cols = -c(area, final_pneumo_decision),
-                      names_to = "variable", values_to = "value") %>% 
-  dplyr::group_by(area, variable, value, final_pneumo_decision) %>% 
-  dplyr::summarise(count_pneumoPositive = n(), .groups = "drop") %>% 
-  dplyr::filter(final_pneumo_decision == "positive") %>% 
-  view() %>% 
-  glimpse()
-
-###################################################
-# denominator
-df_all_NOTarea <- df_epi_sorted %>% 
+# compile all assessment
+df_assessed <- df_epi_sorted %>% 
   dplyr::mutate(across(everything(), as.character)) %>% 
   tidyr::pivot_longer(cols = everything(),
                       names_to = "variable", values_to = "value") %>% 
   dplyr::group_by(variable, value) %>% 
-  dplyr::summarise(count = n(), .groups = "drop") %>% 
-  view() %>% 
+  dplyr::summarise(count_all = n(), .groups = "drop") %>% 
+  dplyr::mutate(
+    percent = round(count_all/900*100, 2), # total n = 900
+    report_assessed_all = paste0(percent, "% (", count_all, "/900)")
+  ) %>% 
+  dplyr::select(-count_all,
+                -percent) %>% 
+  # view() %>%
   glimpse()
 
-# numerator
-df_positivePneumo_NOTarea <- df_epi_sorted %>% 
-  dplyr::mutate(across(-final_pneumo_decision, as.character)) %>%
-  tidyr::pivot_longer(cols = -final_pneumo_decision, names_to = "variable", values_to = "value") %>% 
-  dplyr::group_by(final_pneumo_decision, variable, value) %>% 
-  dplyr::summarise(count = n(), .groups = "drop") %>% 
-  view() %>% 
+# compile all assessment per-area
+df_assessed_area <- df_epi_sorted %>% 
+  dplyr::mutate(across(-area, as.character)) %>%  
+  tidyr::pivot_longer(cols = -area,
+                      names_to = "variable", values_to = "value") %>% 
+  dplyr::group_by(variable, value, area) %>% 
+  dplyr::summarise(count_assessed_perArea = n(), .groups = "drop") %>% 
+  dplyr::mutate(
+    percent = round(count_assessed_perArea/450*100, 2), # total n = 450 per-area
+    report_assessed_perArea = paste0(percent, "% (", count_assessed_perArea, "/450)")
+  ) %>% 
+  dplyr::select(-count_assessed_perArea,
+                -percent) %>% 
+  tidyr::pivot_wider(names_from = area, 
+                     values_from = report_assessed_perArea) %>% 
+  dplyr::rename(
+    report_assessed_lombok = lombok,
+    report_assessed_sumbawa = sumbawa
+  ) %>% 
+  # view() %>%
   glimpse()
 
+compile_assessed_all <- dplyr::left_join(
+  df_assessed, df_assessed_area,
+  by = c("variable", "value")
+) %>% 
+  # view() %>% 
+  glimpse()
 
+compile_all_report <- dplyr::left_join(
+  compile_assessed_all, compile_positive_all,
+  by = c("variable", "value")
+) %>% 
+  # re-arranged
+  dplyr::select(variable, value,
+                report_assessed_lombok, report_positive_lombok,
+                report_assessed_sumbawa, report_positive_sumbawa,
+                report_assessed_all, report_positive_all) %>% 
+  # view() %>% 
+  glimpse()
 
+write.csv(compile_all_report, "outputs/epi_all_descriptive_percentages_report.csv",
+          row.names = F)
 
-
-
-
-column_names <- setdiff(names(df_epi_sorted), c("area", "final_pneumo_decision"))
-for (column in column_names){
-  # df_area <- df_epi_sorted %>% 
-  #   dplyr::group_by(!!sym(column), area) %>% 
-  #   dplyr::summarise(count = n(), .groups = "drop") %>% 
-  #   glimpse()
-  
-  df_area_all <- purrr::map_dfr(column_names, function(column) {
-    df_epi_sorted %>% 
-      dplyr::group_by(!!sym(column), area) %>% 
-      dplyr::summarise(count = n(), .groups = "drop") %>% 
-      # dplyr::rename(value = !!sym(column)) %>% 
-      dplyr::mutate(variable = column)  # Add column name as an identifier
-  }, .id = "iteration") %>% 
-    glimpse()
-  
-  
-  
-  # df_summary <- df_epi_sorted %>% 
-  #   dplyr::group_by(!!sym(column), area, final_pneumo_decision) %>% 
-  #   dplyr::summarise(count = n(), .groups = "drop") %>% 
-  #   glimpse()
-}
 
 # Data analyses process for genData ############################################
 
