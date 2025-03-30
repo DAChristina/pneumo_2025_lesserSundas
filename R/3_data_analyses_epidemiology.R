@@ -76,7 +76,7 @@ df_epi_chars <- df_epi %>%
                 -vaccination_pcv13_dc_n,
                 # reduced because multicollinearity occur (GVIF^(1/(2*Df)) should be < 2)
                 # I omit them from car::vif output
-                # -tribe, # multiCol with area (extremely high: > 10)
+                -tribe, # multiCol with area (extremely high: > 10)
                 # -house_building_regroup, # multicol with window (high: > 5)
                 # -house_window_regroup,
                 # -house_roof_regroup,
@@ -181,7 +181,26 @@ or_multivariable_all <- generate_multivar_report(df_input = df_epi_chars,
 saveRDS(or_multivariable_all, "outputs/epi_all_multivariable_logistic_regression_model.rds")
 # test <- readRDS("outputs/epi_all_multivariable_logistic_regression_model.rds")
 
+# generate pictures
+png(file = "pictures/epiAnalyses_all_multivariable_model1.png",
+    width = 23, height = 23, unit = "cm", res = 600)
+performance::check_model(or_multivariable_all$model1)
+dev.off()
 
+png(file = "pictures/epiAnalyses_all_multivariable_model2.png",
+    width = 23, height = 23, unit = "cm", res = 600)
+performance::check_model(or_multivariable_all$model2)
+dev.off()
+
+png(file = "pictures/epiAnalyses_all_multivariable_final_model_wider.png",
+    width = 23, height = 23, unit = "cm", res = 600)
+final_model_reconvert <- glm(formula(or_multivariable_all$final_model),
+                             family = binomial, data = df_epi_chars)
+performance::check_model(final_model_reconvert)
+dev.off()
+
+
+# generate justufucation report
 df_models <- data.frame(
   Variable = names(coef(or_multivariable_all$model1)),
   Odds_Ratio = or_multivariable_all$odds_ratio1,
@@ -259,7 +278,8 @@ write.csv(df_multicol, "outputs/epi_all_multicollinearity_test.csv", row.names =
 # df_model_comparison <- as.data.frame(or_multivariable_all$model_comparison) %>% 
 #   view()
 
-
+# doesn't matter. Don't think multivariable logistic is the best model
+# coz' the data comes from carriage states.
 # model_goodness_of_fit <- generate_goodnes_of_fit_report(df_input = df_epi_chars,
 #                                                        binary_disease = "final_pneumo_decision",
 #                                                        final_model = or_multivariable_all$final_model,

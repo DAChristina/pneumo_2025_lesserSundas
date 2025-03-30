@@ -1,0 +1,59 @@
+---
+title: "Descriptive Statistics & EpiAnalyses Report"
+author: "Dewi Anastasia Christina"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+if(!require(pacman)) install.packages("pacman")
+pacman::p_load(reactable, tidyverse, plotly)
+
+```
+
+## 1. Descriptive statistics
+
+This
+
+### 1.1. EpiData
+
+The consensus based on selected variables to final_pneumo_decision = positive/negative
+
+```{r}
+# xxx
+
+```
+
+### 1.2. Genome data
+
+Filter out the data:
+
+From positive samples, how many data failed to be processed due to RNA contaminations, etc.
+
+Subset the data to only WGS-processed samples:
+
+MLST, pneumoKITy and contamination profiles.
+
+vaccine-types and non-vaccine-types
+
+## 2. Epidemiological modelling and analyses
+
+This
+
+### 2.1. EpiData
+
+sssss
+
+Justifications for selecting multivariable logistic regression with backwise step.
+
+No statistically significant results occured among variables.
+
+### 2.2. Genome data
+
+ssssss
+
+Multivariate analyses for serotype related to carriage, vaccine types and non-vaccine types,
+
+## Discussion and conclusion

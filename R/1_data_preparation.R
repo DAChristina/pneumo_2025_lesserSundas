@@ -642,7 +642,7 @@ df_gen_all_duplicated_ids <- df_gen_all %>%
 
 # Generate final_pneumo_decision from df_workLab & df_gen_all ##################
 df_final_pneumo <- read.csv("inputs/workLab_data.csv") %>% 
-  dplyr::select(1:12) %>% 
+  dplyr::select(1:12) %>%
   dplyr::left_join(
     read.csv("inputs/genData_all.csv") %>% 
       dplyr::select(specimen_id,
