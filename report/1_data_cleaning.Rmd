@@ -51,6 +51,12 @@ knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning
 
 At the same time, I cleaned up the data by deleting awkward symbols and converting all values to lowercase (except for IDs). I changed "-" value to "tidak," then "no" and "ya" value to "yes". Additional inspections, such as checking for duplicated IDs (e.g. LBK_044) and ID naming inconsistencies, were performed on the real live data (the Google Sheet links).
 
+### VALIDATION NEEDED
+
+```{r}
+knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-30 20-13-27.png")
+```
+
 ### 1.2. workLab data (n = 900)
 
 Since workLab data is gradually updated by the workLab team, I manually combine the data by selecting the first 12 (or 13) columns of epiData. I generated a new column called "**workLab_culture_result_final**" from the previous cultivation journal, incorporating the workLab team's cultivation notes (descriptive colonies), cultivation result (positive or negative) and their optochin testing results. Then, I checked the availability of fasta files and their previous workWGS results (whether they were successful, failed due to DNA extraction issues, RNA contaminations, etc).

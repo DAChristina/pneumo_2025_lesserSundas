@@ -15,9 +15,15 @@ pacman::p_load(reactable, tidyverse, plotly)
 
 ## 1. Descriptive statistics
 
-This
+### 1.1. Methods
 
-### 1.1. EpiData
+xxx
+
+We calculated pneumococcal carriage prevalence among children by study site (Gunungkidul and Southwest Sumba), age group (\<1 year, 1–2 years, 3–4 years), and other factors potentially associated with pneumococcal colonization. The vaccine serotypes were those included in PCV13 (1, 3, 4, 5, 6A, 6B, 7F, 9V, 14, 18C, 19A, 19F, and 23F). S. pneumoniae isolates were deemed to be non-typeable if a serotype could not be determined by cmPCR and Quellung but showed positive results for lytA gene.
+
+### 1.2. Results
+
+#### 1.2.1. EpiData
 
 The consensus based on selected variables to final_pneumo_decision = positive/negative
 
@@ -26,7 +32,7 @@ The consensus based on selected variables to final_pneumo_decision = positive/ne
 
 ```
 
-### 1.2. Genome data
+#### 1.2.2. Genome data
 
 Filter out the data:
 
@@ -40,9 +46,15 @@ vaccine-types and non-vaccine-types
 
 ## 2. Epidemiological modelling and analyses
 
+### 2.1. Methods
+
 This
 
-### 2.1. EpiData
+We used logistic regression models to obtain crude odds ratios (ORs) and adjusted ORs (adjusted by study site) to evaluate factors associated with pneumococcal carriage prevalence. We applied a multivariable logistic regression model to evaluate factors independently associated with pneumococcal carriage; a stepwise backwards elimination process was applied to the full model including all covariates, and variables were removed from the model when 0.05 significance level was not met. Data analyses were performed using Stata (version 15.0) and SAS (version 9.4) software. P values \<0.05 were considered statistically significant.
+
+### 2.2. Results
+
+#### 2.2.1. EpiData
 
 sssss
 
@@ -50,10 +62,10 @@ Justifications for selecting multivariable logistic regression with backwise ste
 
 No statistically significant results occured among variables.
 
-### 2.2. Genome data
+#### 2.2.2. Genome data
 
 ssssss
 
 Multivariate analyses for serotype related to carriage, vaccine types and non-vaccine types,
 
-## Discussion and conclusion
+## 3. Discussion and conclusion

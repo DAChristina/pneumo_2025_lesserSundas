@@ -65,7 +65,7 @@ setdiff(names(df_epi_sumbawa), names(df_epi_lombok))
 # I manually inspect NA values based on data types (numeric & categorical)
 # and many aspects from different columns.
 # 2 NAs in "tidak_termasuk_anak_tersebut_berapa_orang_yang_tinggal_1_rumah_dengan_anak_tersebut" is filled with median/mode = 3
-# 1 NA in "jika_ya_berapa_jika_0_isi_" (healthcare visit); "0" ommited and filled with median/mode = 1 because child is considered sick (batuk)
+# 1 NA in "jika_ya_berapa_jika_0_isi_" (healthcare visit); "0" ommited and filled with median/mode = 1 because child is considered ill (batuk)
 
 # Cleaned data is stored in temporary_df_epi_lombok_sumbawa_manual_combine_row.csv:
 df_epi_merged <- read.csv("raw_data/temporary_df_epi_lombok_sumbawa_manual_combine_row.csv") %>% 
@@ -103,10 +103,7 @@ df_epi_clean <- df_epi_merged %>%
                 apakah_anak_tersebut_menghabiskan_setidaknya_1_hari_dalam_seminggu_bergaulberdekatan_dengan_anak_lain_yang_berusia_5_tahun_yang_tidak_tinggal_serumah_dengan_anak_tersebut,
                 apakah_di_dalam_rumah_ada_yang_merokok_di_depan_anak,
                 
-                # pending data clarification
                 atap_rumah_terbuat_dari, # is "gaiteng" a typographical error of "genteng" (5) or beton (3)
-                # pending data clarification
-                
                 bangunan_rumah_terbuat_dari,
                 tipe_jendela_rumah__tertutup_dengan,
                 sumber_bahan_bakar_untuk_memasak,
@@ -115,12 +112,12 @@ df_epi_clean <- df_epi_merged %>%
                 berapa_kali_anak_tersebut_dirawat_inap_dalam_3_bulan_terakhir_ini_____kali_dirawat_di_rumah_sakit, # what is "H" and "="? I change those to "0"
                 sakit_di_derita_anak_yang_mengharuskan_anak_di_rawat_inap, # I corrected many variations of "pneumonia" such as "pneuminia" and "pneumoni"
                 
-                # specified to sickness
+                # specified to illness
                 apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_pneumonia,
                 apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_diare,
                 
                 tidak_termasuk_rawat_inap_di_rumah_sakit_apakah_anak_tersebut_mengunjungi_fasilitas_kesehatan_klinik_rumah_sakit_puskesmas_dalam_3_bulan_terakhir_ini,
-                jika_ya_berapa_jika_0_isi_, # 1 NA filled with median/mode = 1; child is considered sick (batuk)
+                jika_ya_berapa_jika_0_isi_, # 1 NA filled with median/mode = 1; child is considered ill (batuk)
                 alasan_anak_mengunjungi_fasilitas_kesehatan,
                 apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_batuk,
                 apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_diare,
@@ -129,8 +126,11 @@ df_epi_clean <- df_epi_merged %>%
                 apakah_anak_sedangpernah_mengalami_demam_dalam_3_hari_terakhir_ini,
                 jika_ya_berapa_hari_anak_tersebut_mengalami_demam_jika_tidak_isi_, # review needed, too many categorical values; I change "-" as 0
                 
-                # sickness in past 24h
-                dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami, # review needed
+                # illness in past 24h
+                # dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami, # review needed
+                dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami_batuk,
+                dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami_hidung_ingusan,
+                dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami_kesulitan_bernapas,
                 
                 # antibiotic usage
                 apakah_anak_tersebut_pernah_diberi_obat_antibiotik_3_hari_terakhir_ini,
@@ -152,8 +152,13 @@ df_epi_clean <- df_epi_merged %>%
       age_month >= 49 & age_month < 61 ~ 5
     ),
     age_year_2groups = case_when(
-      age_year == 1 ~ "1 and below",
-      age_year >= 2 ~ "more than 1"
+      age_month < 13 ~ "1 and below",
+      age_month >= 13 ~ "more than 1"
+    ),
+    age_year_3groups = case_when(
+      age_month < 13 ~ "1 and below",
+      age_month >= 13 & age_month < 25 ~ "1-2",
+      age_month >= 25 & age_month < 61 ~ "3-5",
     ),
     # generate VTs and NVTs according to PCV13
     serotype_wgs = toupper(serotype_wgs),
@@ -194,9 +199,9 @@ df_epi_clean <- df_epi_merged %>%
     contact_cooking_place = dimana_biasanya_anda_memasak,
     hospitalised_last_3mo = apakah_anak_tersebut_pernah_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini,
     hospitalised_last_3mo_n = berapa_kali_anak_tersebut_dirawat_inap_dalam_3_bulan_terakhir_ini_____kali_dirawat_di_rumah_sakit,
-    hospitalised_last_3mo_sickness = sakit_di_derita_anak_yang_mengharuskan_anak_di_rawat_inap,
-    hospitalised_last_3mo_sickness_pneumonia = apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_pneumonia,
-    hospitalised_last_3mo_sickness_diarrhoea = apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_diare,
+    hospitalised_last_3mo_illness = sakit_di_derita_anak_yang_mengharuskan_anak_di_rawat_inap,
+    hospitalised_last_3mo_illness_pneumonia = apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_pneumonia,
+    hospitalised_last_3mo_illness_diarrhoea = apakah_sakit_diderita_anak_tersebut_yang_mengharuskan_anak_dirawat_inap_di_rumah_sakit_dalam_3_bulan_terakhir_ini_diare,
     healthcareVisit_last_3mo = tidak_termasuk_rawat_inap_di_rumah_sakit_apakah_anak_tersebut_mengunjungi_fasilitas_kesehatan_klinik_rumah_sakit_puskesmas_dalam_3_bulan_terakhir_ini,
     healthcareVisit_last_3mo_n = jika_ya_berapa_jika_0_isi_,
     healthcareVisit_last_3mo_reason = alasan_anak_mengunjungi_fasilitas_kesehatan,
@@ -204,9 +209,12 @@ df_epi_clean <- df_epi_merged %>%
     healthcareVisit_last_3mo_reason_diarrhoea = apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_diare,
     healthcareVisit_last_3mo_reason_rash = apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_ruam,
     healthcareVisit_last_3mo_reason_others = apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_lainlain,
-    sickness_past3days_fever = apakah_anak_sedangpernah_mengalami_demam_dalam_3_hari_terakhir_ini,
-    sickness_past3days_fever_howManyDays = jika_ya_berapa_hari_anak_tersebut_mengalami_demam_jika_tidak_isi_,
-    sickness_past24h = dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami,
+    illness_past3days_fever = apakah_anak_sedangpernah_mengalami_demam_dalam_3_hari_terakhir_ini,
+    illness_past3days_fever_howManyDays = jika_ya_berapa_hari_anak_tersebut_mengalami_demam_jika_tidak_isi_,
+    # illness_past24h = dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami,
+    illness_past24h_cough = dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami_batuk,
+    illness_past24h_runny_nose = dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami_hidung_ingusan,
+    illness_past24h_difficulty_breathing = dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami_kesulitan_bernapas,
     antibiotic_past3days = apakah_anak_tersebut_pernah_diberi_obat_antibiotik_3_hari_terakhir_ini,
     antibiotic_past1mo = apakah_anak_tersebut_pernah_diberi_obat_antibiotik_1_bulan_terakhir_ini,
     vaccination_hibpentavalent_n = sudah_berapa_kali_anak_anda_diberi_vaksin_haemophilus_influenzae_hibpentavalent_dtphbhib,
@@ -217,6 +225,12 @@ df_epi_clean <- df_epi_merged %>%
   ) %>% 
   # generate re-grouping imbalanced columns
   dplyr::mutate(
+    breastFeed_compiled = case_when(
+      breastMilk_given == "yes" & breastMilk_still_being_given == "yes" ~ "currently breastfeed",
+      breastMilk_given == "no" & breastMilk_still_being_given == "yes" ~ "currently breastfeed",
+      breastMilk_given == "yes" & breastMilk_still_being_given == "no" ~ "ever breastfeed",
+      breastMilk_given == "no" & breastMilk_still_being_given == "no" ~ "never breastfeed"
+    ),
     house_roof_regroup = case_when(
       house_roof %in% c("batako", "beton", "genteng logam") ~ "others",
       TRUE ~ house_roof
@@ -233,7 +247,7 @@ df_epi_clean <- df_epi_merged %>%
     nTotal_people_regroup = case_when(
       is.na(nTotal_people) | nTotal_people < 4 ~ "1-3 (low)",
       nTotal_people >= 4 & nTotal_people < 7 ~ "4-6 (moderate)",
-      nTotal_people >= 7 ~ ">7 (high)"
+      nTotal_people >= 7 ~ ">6 (high)"
     ),
     nTotal_child_5yo_andBelow_regroup = case_when(
       nTotal_child_5yo_andBelow == 0 ~ "0",
@@ -242,6 +256,18 @@ df_epi_clean <- df_epi_merged %>%
     nTotal_child_5yo_andBelow_sleep_regroup = case_when(
       nTotal_child_5yo_andBelow_sleep == 0 ~ "0",
       nTotal_child_5yo_andBelow_sleep >= 0 ~ "1-3"
+    ),
+    illness_past24h_cough = case_when(
+      is.na(illness_past24h_cough) ~ "no",
+      TRUE ~ illness_past24h_cough
+    ),
+    illness_past24h_runny_nose = case_when(
+      is.na(illness_past24h_runny_nose) ~ "no",
+      TRUE ~ illness_past24h_runny_nose
+    ),
+    illness_past24h_difficulty_breathing = case_when(
+      is.na(illness_past24h_difficulty_breathing) ~ "no",
+      TRUE ~ illness_past24h_difficulty_breathing
     ),
     vaccination_pcv13_dc_n_regroup = case_when(
       vaccination_pcv13_dc_n < 3 ~ "1-2 mandatory",
@@ -360,10 +386,10 @@ df_epi_coded <- df_epi_clean %>%
   #     healthcareVisit_last_3mo == "no" ~ 2,
   #     TRUE ~ NA_real_
   #   ),
-  #   coded_sickness_past3days_fever = case_when(
-  #     sickness_past3days_fever == "yes" ~ 1,
-  #     sickness_past3days_fever == "no" ~ 2,
-  #     sickness_past3days_fever == "unknown" ~ 3,
+  #   coded_illness_past3days_fever = case_when(
+  #     illness_past3days_fever == "yes" ~ 1,
+  #     illness_past3days_fever == "no" ~ 2,
+  #     illness_past3days_fever == "unknown" ~ 3,
   #     TRUE ~ NA_real_
   #   ),
   #   coded_antibiotic_past3days = case_when(
@@ -493,7 +519,7 @@ df_workLab <- dplyr::bind_rows(
   ) %>% 
   dplyr::select(-workWGS_species, -workWGS_serotype,
                 -kode_1_positif_2_negatif_3_not_yet) %>% 
-  view() %>%
+  # view() %>%
   glimpse()
 
 write.csv(df_workLab, "inputs/workLab_data.csv", row.names = F)

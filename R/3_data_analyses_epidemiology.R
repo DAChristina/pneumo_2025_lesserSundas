@@ -103,8 +103,8 @@ cols_with_na_sums <- df_epi_chars %>%
                 NAs != 0) %>% 
   glimpse()
 
-or_matrix_all <- generate_or_matrix_report(df_input = df_epi_chars,
-                                           binary_disease = "final_pneumo_decision")
+or_matrix_all <- generate_or_matrix_report(df_input = df_epi,
+                                           binary_disease = "area")
 
 or_matrix_table_report <- dplyr::full_join(
   purrr::imap_dfr(or_matrix_all, ~{

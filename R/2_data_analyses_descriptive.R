@@ -24,6 +24,7 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     tribe = as.factor(tribe),
     breastMilk_given = as.factor(breastMilk_given),
     breastMilk_still_being_given = as.factor(breastMilk_still_being_given),
+    breastFeed_compiled = as.factor(breastFeed_compiled),
     contact_kindergarten = as.factor(contact_kindergarten),
     contact_otherChildren = as.factor(contact_otherChildren),
     contact_cigarettes = as.factor(contact_cigarettes),
@@ -34,13 +35,18 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     house_window_regroup = as.factor(house_window_regroup),
     hospitalised_last_3mo = as.factor(hospitalised_last_3mo),
     healthcareVisit_last_3mo = as.factor(healthcareVisit_last_3mo),
-    sickness_past3days_fever = as.factor(sickness_past3days_fever),
+    illness_past3days_fever = as.factor(illness_past3days_fever),
+    illness_past24h_cough = as.factor(illness_past24h_cough),
+    illness_past24h_runny_nose = as.factor(illness_past24h_runny_nose),
+    illness_past24h_difficulty_breathing = as.factor(illness_past24h_difficulty_breathing),
     antibiotic_past3days = as.factor(antibiotic_past3days),
     antibiotic_past1mo = as.factor(antibiotic_past1mo),
     age_year_2groups = factor(age_year_2groups,
                               levels = c("1 and below", "more than 1")),
+    age_year_3groups = factor(age_year_3groups,
+                           levels = c("1 and below", "1-2", "3-5")),
     nTotal_people_regroup = factor(nTotal_people_regroup,
-                                   levels = c("1-3 (low)", "4-6 (moderate)", ">7 (high)")),
+                                   levels = c("1-3 (low)", "4-6 (moderate)", ">6 (high)")),
     nTotal_child_5yo_andBelow_regroup = factor(nTotal_child_5yo_andBelow_regroup,
                                                levels = c("0", "1-4")),
     nTotal_child_5yo_andBelow_sleep_regroup = factor(nTotal_child_5yo_andBelow_sleep_regroup,
@@ -101,14 +107,14 @@ for (column in column_names){
   
   # Inspect weird distributions
   if (is.numeric(df_epi[[column]])) {
-    predict <- ggplot(df_epi,
+    predict1 <- ggplot(df_epi,
                       aes(x = !!sym(column), # convert 1-2 to proportion
                           y = as.numeric(final_pneumo_decision)-1)) +
       geom_point() +
       geom_smooth(method = "loess") +  # Check for nonlinearity
       theme_bw()
     
-    p2 <- cowplot::plot_grid(p1, predict,
+    p2 <- cowplot::plot_grid(p1, predict1,
                              nrow = 2,
                              labels = c("", "C"))
     
@@ -117,15 +123,121 @@ for (column in column_names){
     dev.off()
     
   } else {
-    png(file = f_path, width = 23, height = 12, unit = "cm", res = 600)
-    print(p1)
+    predict2 <- ggplot(df_epi, 
+                      aes(x = !!sym(column), 
+                          y = as.numeric(final_pneumo_decision) - 1)) +
+      # geom_boxplot()+
+      geom_violin(trim = T, colour = NA, fill = "skyblue", alpha = 0.7) + 
+      geom_jitter(width = 0.1, alpha = 0.2) +
+      theme_bw()
+    
+    p3 <- cowplot::plot_grid(p1, predict2,
+                             nrow = 2,
+                             labels = c("", "C"))
+    
+    png(file = f_path, width = 23, height = 23, unit = "cm", res = 600)
+    print(p3)
     dev.off()
     
   }
   
 }
 
+# based on visual inspection,
+# I preferred the re-grouped columns over the original one
+# generate descriptive report based on area
+df_epi_sorted <- df_epi %>% 
+  dplyr::select(sort(names(df_epi))) %>% 
+  dplyr::select(final_pneumo_decision,
+                age_year_3groups,
+                contains("antibiotic"),
+                area,
+                breastFeed_compiled,
+                contains("contact"),
+                healthcareVisit_last_3mo,
+                hospitalised_last_3mo,
+                contains("house"),
+                contains("illness"),
+                contains("n_child"),
+                nTotal_child_5yo_andBelow_regroup,
+                nTotal_child_5yo_andBelow_sleep_regroup,
+                nTotal_people_regroup,
+                sex,
+                tribe,
+                vaccination_hibpentavalent_dc_n,
+                vaccination_pcv13_dc_n_regroup
+                ) %>% 
+  glimpse()
 
+# denominator
+df_area <- df_epi_sorted %>% 
+  dplyr::mutate(across(-area, as.character)) %>%
+  tidyr::pivot_longer(cols = -area, names_to = "variable", values_to = "value") %>% 
+  dplyr::group_by(area, variable, value) %>% 
+  dplyr::summarise(count = n(), .groups = "drop") %>% 
+  view() %>% 
+  glimpse()
+
+# numerator
+df_positivePneumo_area <- df_epi_sorted %>% 
+  dplyr::mutate(across(-c(area, final_pneumo_decision), as.character)) %>%  
+  tidyr::pivot_longer(cols = -c(area, final_pneumo_decision),
+                      names_to = "variable", values_to = "value") %>% 
+  dplyr::group_by(area, variable, value, final_pneumo_decision) %>% 
+  dplyr::summarise(count_pneumoPositive = n(), .groups = "drop") %>% 
+  dplyr::filter(final_pneumo_decision == "positive") %>% 
+  view() %>% 
+  glimpse()
+
+###################################################
+# denominator
+df_all_NOTarea <- df_epi_sorted %>% 
+  dplyr::mutate(across(everything(), as.character)) %>% 
+  tidyr::pivot_longer(cols = everything(),
+                      names_to = "variable", values_to = "value") %>% 
+  dplyr::group_by(variable, value) %>% 
+  dplyr::summarise(count = n(), .groups = "drop") %>% 
+  view() %>% 
+  glimpse()
+
+# numerator
+df_positivePneumo_NOTarea <- df_epi_sorted %>% 
+  dplyr::mutate(across(-final_pneumo_decision, as.character)) %>%
+  tidyr::pivot_longer(cols = -final_pneumo_decision, names_to = "variable", values_to = "value") %>% 
+  dplyr::group_by(final_pneumo_decision, variable, value) %>% 
+  dplyr::summarise(count = n(), .groups = "drop") %>% 
+  view() %>% 
+  glimpse()
+
+
+
+
+
+
+
+column_names <- setdiff(names(df_epi_sorted), c("area", "final_pneumo_decision"))
+for (column in column_names){
+  # df_area <- df_epi_sorted %>% 
+  #   dplyr::group_by(!!sym(column), area) %>% 
+  #   dplyr::summarise(count = n(), .groups = "drop") %>% 
+  #   glimpse()
+  
+  df_area_all <- purrr::map_dfr(column_names, function(column) {
+    df_epi_sorted %>% 
+      dplyr::group_by(!!sym(column), area) %>% 
+      dplyr::summarise(count = n(), .groups = "drop") %>% 
+      # dplyr::rename(value = !!sym(column)) %>% 
+      dplyr::mutate(variable = column)  # Add column name as an identifier
+  }, .id = "iteration") %>% 
+    glimpse()
+  
+  
+  
+  # df_summary <- df_epi_sorted %>% 
+  #   dplyr::group_by(!!sym(column), area, final_pneumo_decision) %>% 
+  #   dplyr::summarise(count = n(), .groups = "drop") %>% 
+  #   glimpse()
+}
 
 # Data analyses process for genData ############################################
 
