@@ -51,6 +51,8 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
                                                levels = c("0", "1-4")),
     nTotal_child_5yo_andBelow_sleep_regroup = factor(nTotal_child_5yo_andBelow_sleep_regroup,
                                                      levels = c("0", "1-3")),
+    vaccination_hibpentavalent_dc_n_regroup = factor(vaccination_hibpentavalent_dc_n_regroup,
+                                            levels = c("1-3 mandatory", "4 booster")),
     vaccination_pcv13_dc_n_regroup = factor(vaccination_pcv13_dc_n_regroup,
                                             levels = c("1-2 mandatory", "3-4 booster")),
     final_pneumo_decision = factor(final_pneumo_decision,
@@ -164,7 +166,7 @@ df_epi_sorted <- df_epi %>%
                 nTotal_people_regroup,
                 sex,
                 tribe,
-                vaccination_hibpentavalent_dc_n,
+                vaccination_hibpentavalent_dc_n_regroup,
                 vaccination_pcv13_dc_n_regroup
                 ) %>% 
   glimpse()

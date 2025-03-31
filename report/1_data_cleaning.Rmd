@@ -65,7 +65,7 @@ Since workLab data is gradually updated by the workLab team, I manually combine 
 
 WGS results available in **Data WGS_Lombok.xlsx** are based on fasta data uploaded to [PathogenWatch](https://pathogen.watch/). Since the IDs in the report are based on the header line of a fasta file (not the file name), I manually generated a new ID column called "dc_id" to correct naming inconsistencies.
 
-I can't trust PathogenWatch's species determination and tehir MLST results, as many species that are *not identified* as pneumococcus (e.g. *Bacillus cereus*, *Haemophillus influenzae*, etc.) have large genome sizes, with many allelic profiles are *simply* denoted as "Novel". This suggest a high possibility of pneumococcus contamination during cultivation.
+I can't trust PathogenWatch's species determination and their MLST results, as many species that are *not identified* as pneumococcus (e.g. *Bacillus cereus*, *Haemophillus influenzae*, etc.) have large genome sizes, with many allelic profiles are *simply* denoted as "Novel". This suggest a high possibility of pneumococcus contamination during cultivation.
 
 To ensure accuracy, I re-analysed all available fasta data using Torsten Seemann's **MLST** toolset (which technically performs **BLAST** on 7 housekeeping genes), checked for multiple-serotype contamination using Sheppard et al.'s **pneumoKITy** and re-assessed the quality of genome assemblies using **Bioconda::assembly-stats** (developed by Sanger Pathogens).
 

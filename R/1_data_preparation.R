@@ -269,6 +269,10 @@ df_epi_clean <- df_epi_merged %>%
       is.na(illness_past24h_difficulty_breathing) ~ "no",
       TRUE ~ illness_past24h_difficulty_breathing
     ),
+    vaccination_hibpentavalent_dc_n_regroup = case_when(
+      vaccination_hibpentavalent_dc_n < 4 ~ "1-3 mandatory",
+      vaccination_hibpentavalent_dc_n >= 4 ~ "4 booster"
+    ),
     vaccination_pcv13_dc_n_regroup = case_when(
       vaccination_pcv13_dc_n < 3 ~ "1-2 mandatory",
       vaccination_pcv13_dc_n >= 3 ~ "3-4 booster"
@@ -710,7 +714,7 @@ df_final_pneumo <- read.csv("inputs/workLab_data.csv") %>%
       TRUE ~ final_pneumo_decision
     )
   ) %>%
-  view() %>% 
+  # view() %>% 
   glimpse()
 
 write.csv(df_final_pneumo, "inputs/final_pneumo_decision.csv", row.names = F)
@@ -724,7 +728,8 @@ df_final_pneumo_group <- df_final_pneumo %>%
                   final_pneumo_decision
                   ) %>% 
   dplyr::summarise(count = n()) %>% 
-  view()
+  # view() %>% 
+  glimpse()
 
 # combine final_pneumo_decision to epiData
 final_epiData <- read.csv("inputs/epiData.csv") %>% 

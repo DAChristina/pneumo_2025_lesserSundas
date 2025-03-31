@@ -7,12 +7,12 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
   dplyr::mutate(
     age_month = as.numeric(age_month),
     age_year = as.numeric(age_year),
-    # nTotal_people = as.numeric(nTotal_people),
-    # nTotal_child_5yo_andBelow = as.numeric(nTotal_child_5yo_andBelow),
-    # n_child_1yo_andBelow = as.numeric(n_child_1yo_andBelow),
-    # n_child_1to2yo = as.numeric(n_child_1to2yo),
-    # n_child_2to4yo = as.numeric(n_child_2to4yo),
-    # nTotal_child_5yo_andBelow_sleep = as.numeric(nTotal_child_5yo_andBelow_sleep),
+    nTotal_people = as.numeric(nTotal_people),
+    nTotal_child_5yo_andBelow = as.numeric(nTotal_child_5yo_andBelow),
+    n_child_1yo_andBelow = as.numeric(n_child_1yo_andBelow),
+    n_child_1to2yo = as.numeric(n_child_1to2yo),
+    n_child_2to4yo = as.numeric(n_child_2to4yo),
+    nTotal_child_5yo_andBelow_sleep = as.numeric(nTotal_child_5yo_andBelow_sleep),
     hospitalised_last_3mo_n = as.numeric(hospitalised_last_3mo_n),
     healthcareVisit_last_3mo_n = as.numeric(healthcareVisit_last_3mo_n), # 1 "unknown" is replaced as NA
     # healthcareVisit_last_3mo_n = dplyr::na_if(healthcareVisit_last_3mo_n, "unknown")
@@ -24,6 +24,7 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     tribe = as.factor(tribe),
     breastMilk_given = as.factor(breastMilk_given),
     breastMilk_still_being_given = as.factor(breastMilk_still_being_given),
+    breastFeed_compiled = as.factor(breastFeed_compiled),
     contact_kindergarten = as.factor(contact_kindergarten),
     contact_otherChildren = as.factor(contact_otherChildren),
     contact_cigarettes = as.factor(contact_cigarettes),
@@ -34,65 +35,87 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     house_window_regroup = as.factor(house_window_regroup),
     hospitalised_last_3mo = as.factor(hospitalised_last_3mo),
     healthcareVisit_last_3mo = as.factor(healthcareVisit_last_3mo),
-    sickness_past3days_fever = as.factor(sickness_past3days_fever),
+    illness_past3days_fever = as.factor(illness_past3days_fever),
+    illness_past24h_cough = as.factor(illness_past24h_cough),
+    illness_past24h_runny_nose = as.factor(illness_past24h_runny_nose),
+    illness_past24h_difficulty_breathing = as.factor(illness_past24h_difficulty_breathing),
     antibiotic_past3days = as.factor(antibiotic_past3days),
     antibiotic_past1mo = as.factor(antibiotic_past1mo),
     age_year_2groups = factor(age_year_2groups,
                               levels = c("1 and below", "more than 1")),
+    age_year_3groups = factor(age_year_3groups,
+                              levels = c("1 and below", "1-2", "3-5")),
     nTotal_people_regroup = factor(nTotal_people_regroup,
-                                   levels = c("1-3 (low)", "4-6 (moderate)", ">7 (high)")),
+                                   levels = c("1-3 (low)", "4-6 (moderate)", ">6 (high)")),
     nTotal_child_5yo_andBelow_regroup = factor(nTotal_child_5yo_andBelow_regroup,
                                                levels = c("0", "1-4")),
     nTotal_child_5yo_andBelow_sleep_regroup = factor(nTotal_child_5yo_andBelow_sleep_regroup,
                                                      levels = c("0", "1-3")),
+    vaccination_hibpentavalent_dc_n_regroup = factor(vaccination_hibpentavalent_dc_n_regroup,
+                                                     levels = c("1-3 mandatory", "4 booster")),
     vaccination_pcv13_dc_n_regroup = factor(vaccination_pcv13_dc_n_regroup,
                                             levels = c("1-2 mandatory", "3-4 booster")),
     final_pneumo_decision = factor(final_pneumo_decision,
                                    levels = c("negative", "positive"))
   ) %>% 
+  dplyr::select(sort(names(df_epi))) %>% 
+  dplyr::select(final_pneumo_decision,
+                age_year_3groups,
+                contains("antibiotic"),
+                area,
+                breastFeed_compiled,
+                contains("contact"),
+                healthcareVisit_last_3mo,
+                hospitalised_last_3mo,
+                contains("house"),
+                contains("illness"),
+                contains("n_child"),
+                nTotal_child_5yo_andBelow_regroup,
+                nTotal_child_5yo_andBelow_sleep_regroup,
+                nTotal_people_regroup,
+                sex,
+                tribe,
+                vaccination_hibpentavalent_dc_n_regroup,
+                vaccination_pcv13_dc_n_regroup
+  ) %>% 
   glimpse()
 
 # Test epiFunction ehehe
 # try OR report works only for categorical data
-df_epi_chars <- df_epi %>% 
-  dplyr::select(where(~ all(!is.na(.))), # NAs in workLab, workFasta & not interesting columns
-                -contains("hospitalised"), # NAs in workLab, workFasta & not interesting columns
-                -contains("healthcareVisit"), # NAs in workLab, workFasta & not interesting columns
-                -sickness_past24h, # NAs in workLab, workFasta & not interesting columns
-                -sickness_past3days_fever_howManyDays, # conflicted values with fever column
-                # imbalanced values
-                -age_month, # use age_year instead
-                -breastMilk_given,
-                -n_child_1yo_andBelow,
-                -n_child_1to2yo,
-                -n_child_2to4yo,
-                -sickness_past3days_fever,
-                -antibiotic_past3days,
-                -antibiotic_past1mo,
-                # too diverse, use other grouping columns instead
-                -nTotal_people,
-                -nTotal_child_5yo_andBelow,
-                -nTotal_child_5yo_andBelow_sleep,
-                -vaccination_pcv13_dc_n,
-                # reduced because multicollinearity occur (GVIF^(1/(2*Df)) should be < 2)
-                # I omit them from car::vif output
-                -tribe, # multiCol with area (extremely high: > 10)
-                # -house_building_regroup, # multicol with window (high: > 5)
-                # -house_window_regroup,
-                # -house_roof_regroup,
-                # -nTotal_child_5yo_andBelow_regroup,
-                # -nTotal_child_5yo_andBelow_sleep_regroup,
-                -where(is.character)
-                ) %>% 
-  glimpse()
+# df_epi_chars <- df_epi %>% 
+#   dplyr::select(where(~ all(!is.na(.))), # NAs in workLab, workFasta & not interesting columns
+#                 -contains("hospitalised"), # NAs in workLab, workFasta & not interesting columns
+#                 -contains("healthcareVisit"), # NAs in workLab, workFasta & not interesting columns
+#                 -sickness_past24h, # NAs in workLab, workFasta & not interesting columns
+#                 -sickness_past3days_fever_howManyDays, # conflicted values with fever column
+#                 # imbalanced values
+#                 -age_month, # use age_year instead
+#                 -breastMilk_given,
+#                 -n_child_1yo_andBelow,
+#                 -n_child_1to2yo,
+#                 -n_child_2to4yo,
+#                 -sickness_past3days_fever,
+#                 -antibiotic_past3days,
+#                 -antibiotic_past1mo,
+#                 # too diverse, use other grouping columns instead
+#                 -nTotal_people,
+#                 -nTotal_child_5yo_andBelow,
+#                 -nTotal_child_5yo_andBelow_sleep,
+#                 -vaccination_pcv13_dc_n,
+#                 # reduced because multicollinearity occur (GVIF^(1/(2*Df)) should be < 2)
+#                 # I omit them from car::vif output
+#                 -tribe, # multiCol with area (extremely high: > 10)
+#                 # -house_building_regroup, # multicol with window (high: > 5)
+#                 # -house_window_regroup,
+#                 # -house_roof_regroup,
+#                 # -nTotal_child_5yo_andBelow_regroup,
+#                 # -nTotal_child_5yo_andBelow_sleep_regroup,
+#                 -where(is.character)
+#                 ) %>% 
+#   glimpse()
 
+df_epi_chars <- df_epi
 column_names <- setdiff(names(df_epi_chars), "final_pneumo_decision")
-for (column in column_names){
-  df_summary <- df_epi_chars %>% 
-    dplyr::group_by(!!sym(column), final_pneumo_decision) %>% 
-    dplyr::summarise(count = n(), .groups = "drop") %>% 
-    glimpse()
-}
 
 cols_with_na_sums <- df_epi_chars %>%
   dplyr::summarise(across(everything(), ~ sum(is.na(.)))) %>% 
@@ -113,8 +136,8 @@ or_matrix_table_report <- dplyr::full_join(
     
     df %>%
       as.data.frame() %>%
-      dplyr::mutate(aspect = .y, category = rownames(df)) %>%
-      dplyr::relocate(aspect, category) # Moves to first columns
+      dplyr::mutate(variable = .y, value = rownames(df)) %>%
+      dplyr::relocate(variable, value) # Moves to first columns
   }),
   purrr::imap_dfr(or_matrix_all, ~{
     df <- .x$p.value
@@ -122,42 +145,56 @@ or_matrix_table_report <- dplyr::full_join(
     
     df %>%
       as.data.frame() %>%
-      dplyr::mutate(aspect = .y, category = rownames(df)) %>%
-      dplyr::relocate(aspect, category)
+      dplyr::mutate(variable = .y, value = rownames(df)) %>%
+      dplyr::relocate(variable, value)
   }),
-  by = c("aspect", "category")
+  by = c("variable", "value")
 ) %>% 
   dplyr::mutate(
     significance = case_when(
       midp.exact < 0.05 | fisher.exact < 0.05 | chi.square < 0.05 ~ "occur",
-      !is.na(midp.exact) & !is.na(fisher.exact) & !is.na(chi.square) ~ "not occur",
+      !is.na(midp.exact) & !is.na(fisher.exact) & !is.na(chi.square) ~ "no",
       TRUE ~ NA_character_
     )) %>% 
-  dplyr::select(aspect, category, estimate, lower, upper, 
-                midp.exact, fisher.exact, chi.square, significance)
+  dplyr::select(variable, value, estimate, lower, upper, 
+                midp.exact, fisher.exact, chi.square, significance) %>% 
+  # view() %>% 
+  glimpse()
+
+# combine report
+compile_all_report_with_pValues <- dplyr::left_join(
+  read.csv("outputs/epi_all_descriptive_percentages_report.csv"),
+  or_matrix_table_report,
+  by = c("variable", "value")
+) %>% 
+  # view() %>%
+  glimpse()
+
+write.csv(compile_all_report_with_pValues, "outputs/epi_all_descriptive_percentages_report_with_pValues.csv",
+          row.names = F)
 
 
-# try glm OR report
-or_univar_all <- generate_univar_report(df_input = df_epi_chars,
+# try glm crude OR report
+or_univar_all <- generate_univar_report(df_input = df_epi_chars %>% 
+                                          dplyr::select(where(~ all(!is.na(.)))),
                                                    binary_disease = "final_pneumo_decision")
 
 or_univar_model_report <- purrr::imap_dfr(or_univar_all, ~{
   model <- .x$model
   coefficients_df <- broom::tidy(model) %>%
-    mutate(aspect = .y) %>%
-    rename(category = term)
+    mutate(variable = .y) %>%
+    rename(value = term)
   
   model_stats <- dplyr::tibble(
-    aspect = .y,
+    variable = .y,
     null_deviance = model$null.deviance,
     residual_deviance = model$deviance,
     df_null = model$df.null,
     df_residual = model$df.residual,
     AIC = model$aic
   )
-  
   # Combine everything into one table
-  dplyr::left_join(coefficients_df, model_stats, by = "aspect")
+  dplyr::left_join(coefficients_df, model_stats, by = "variable")
 }) %>% 
   dplyr::mutate(OR = exp(estimate), # estimate is log(OR)
                 OR_lower_CI = exp(estimate - 1.96 * std.error),
@@ -167,15 +204,80 @@ or_univar_model_report <- purrr::imap_dfr(or_univar_all, ~{
                   !is.na(p.value) ~ "not occur",
                   TRUE ~ NA_character_)
   ) %>% 
-  dplyr::arrange(aspect) %>% 
-  dplyr::select(aspect, category, estimate, std.error,
-                OR, OR_lower_CI, OR_upper_CI,
-                statistic, p.value, significance,
-                null_deviance, residual_deviance, df_null, df_residual, AIC)
+  dplyr::arrange(variable) %>% 
+  dplyr::rename_all(~ paste0("crude_", .)) %>% 
+  dplyr::rename(variable = crude_variable,
+                value = crude_value) %>% 
+  dplyr::mutate(crude_OR_report = paste0(round(crude_OR, 2),
+                                         " (", round(crude_OR_lower_CI, 2),
+                                         "-", round(crude_OR_upper_CI, 2), ")")) %>% 
+  dplyr::select(variable, value, crude_estimate, crude_std.error,
+                crude_OR, crude_OR_lower_CI, crude_OR_upper_CI,
+                crude_OR_report,
+                crude_statistic, crude_p.value, crude_significance,
+                crude_null_deviance, crude_residual_deviance,
+                crude_df_null, crude_df_residual, crude_AIC) %>% 
+  glimpse()
 
+# try glm crude OR plus area report
+or_univar_all_plusArea <- generate_univar_plusArea_report(df_input = df_epi_chars %>% 
+                                          dplyr::select(where(~ all(!is.na(.)))),
+                                        binary_disease = "final_pneumo_decision")
+
+
+or_univar_model_plusArea_report <- purrr::imap_dfr(or_univar_all_plusArea, ~{
+  model <- .x$model
+  coefficients_df <- broom::tidy(model) %>%
+    mutate(variable = .y) %>%
+    rename(value = term)
+  
+  model_stats <- dplyr::tibble(
+    variable = .y,
+    null_deviance = model$null.deviance,
+    residual_deviance = model$deviance,
+    df_null = model$df.null,
+    df_residual = model$df.residual,
+    AIC = model$aic
+  )
+  # Combine everything into one table
+  dplyr::left_join(coefficients_df, model_stats, by = "variable")
+}) %>% 
+  dplyr::mutate(OR = exp(estimate), # estimate is log(OR)
+                OR_lower_CI = exp(estimate - 1.96 * std.error),
+                OR_upper_CI = exp(estimate + 1.96 * std.error),
+                significance = case_when(
+                  p.value < 0.05 ~ "occur",
+                  !is.na(p.value) ~ "not occur",
+                  TRUE ~ NA_character_)
+  ) %>% 
+  dplyr::arrange(variable) %>% 
+  dplyr::rename_all(~ paste0("plusArea_", .)) %>% 
+  dplyr::rename(variable = plusArea_variable,
+                value = plusArea_value) %>% 
+  dplyr::mutate(plusArea_report = paste0(round(plusArea_OR, 2),
+                                         " (", round(plusArea_OR_lower_CI, 2),
+                                         "-", round(plusArea_OR_upper_CI, 2), ")")) %>% 
+  dplyr::select(variable, value, plusArea_estimate, plusArea_std.error,
+                plusArea_OR, plusArea_OR_lower_CI, plusArea_OR_upper_CI,
+                plusArea_report,
+                plusArea_statistic, plusArea_p.value, plusArea_significance,
+                plusArea_null_deviance, plusArea_residual_deviance,
+                plusArea_df_null, plusArea_df_residual, plusArea_AIC) %>% 
+  glimpse()
+
+compilse_crude_plusArea <- dplyr::left_join(
+  or_univar_model_plusArea_report, or_univar_model_report,
+  by = c("variable", "value")
+) %>% 
+  dplyr::select(variable, value,
+                crude_OR_report, crude_p.value, crude_significance,
+                plusArea_report, plusArea_p.value, plusArea_significance,) %>% 
+  view() %>% 
+  glimpse()
 
 # try glm multivariable OR report
-or_multivariable_all <- generate_multivar_report(df_input = df_epi_chars,
+or_multivariable_all <- generate_multivar_report(df_input = df_epi_chars %>% 
+                                                   dplyr::select(where(~ all(!is.na(.)))),
                                                  binary_disease = "final_pneumo_decision") 
 
 saveRDS(or_multivariable_all, "outputs/epi_all_multivariable_logistic_regression_model.rds")
@@ -280,11 +382,11 @@ write.csv(df_multicol, "outputs/epi_all_multicollinearity_test.csv", row.names =
 
 # doesn't matter. Don't think multivariable logistic is the best model
 # coz' the data comes from carriage states.
-# model_goodness_of_fit <- generate_goodnes_of_fit_report(df_input = df_epi_chars,
-#                                                        binary_disease = "final_pneumo_decision",
-#                                                        final_model = or_multivariable_all$final_model,
-#                                                        h_group = 5) # based on 100 < n data < 1000
-# model_goodness_of_fit
+model_goodness_of_fit <- generate_goodnes_of_fit_report(df_input = df_epi_chars,
+                                                       binary_disease = "final_pneumo_decision",
+                                                       final_model = or_multivariable_all$final_model,
+                                                       h_group = 5) # based on 100 < n data < 1000
+model_goodness_of_fit
 
 
 # epiAnalyses for genome data (subset to positive pneumo only) #################

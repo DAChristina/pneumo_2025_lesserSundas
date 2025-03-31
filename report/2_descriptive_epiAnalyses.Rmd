@@ -1,8 +1,11 @@
 ---
 title: "Descriptive Statistics & EpiAnalyses Report"
 author: "Dewi Anastasia Christina"
-date: "`r Sys.Date()`"
-output: html_document
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+date: "`r format(Sys.time(), '%d %B %Y')`"
 ---
 
 ```{r setup, include=FALSE}
@@ -17,22 +20,48 @@ pacman::p_load(reactable, tidyverse, plotly)
 
 ### 1.1. Methods
 
-xxx
+Pneumococcal carriage following PCV13 immunisation was assessed among children in two islands of Lesser Sunda Archipelago, Lombok and Sumbawa. We incorporated age group (\<1 year, 1-2 years, 3-5 years) along with other factors potentially influencing pneumococcal colonisation. *S. pneumoniae* species identification was determined using the combination of culture-based methods (physical characteristics and optochin assessment) and whole genome sequencing (WGS)-based approaches.
 
-We calculated pneumococcal carriage prevalence among children by study site (Gunungkidul and Southwest Sumba), age group (\<1 year, 1–2 years, 3–4 years), and other factors potentially associated with pneumococcal colonization. The vaccine serotypes were those included in PCV13 (1, 3, 4, 5, 6A, 6B, 7F, 9V, 14, 18C, 19A, 19F, and 23F). S. pneumoniae isolates were deemed to be non-typeable if a serotype could not be determined by cmPCR and Quellung but showed positive results for lytA gene.
+To ensure accuracy on species identification, we evaluated the quality of genome assembly using **Bioconda::assembly-stats** (developed by Sanger Pathogens) and classified genomes into two categories: those with a genome length 1.9 Mb-2.3 Mb were considered pure pneumococcal genomes while those outside the ranges were classified as pneumococcal genomes with intra-species contamination. Further validation was performed using Torsten Seemann's **MLST** toolset, which conducts **BLAST** analysis on seven housekeeping genes. Multiple-serotype contamination was examined using Sheppard et al.'s **pneumoKITy**. Additionally, we uploaded the data to PathogenWatch (<http://pathogen.watch>) to obtain *in silico* identification of pneumococcus including their serotype determination, Global Pneumococcal Sequence Cluster (GPSC) classification, sequence type (ST), and antibiotic resistance profiling.
+
+The vaccine serotypes included in PCV13 (1, 3, 4, 5, 6A, 6B, 7F, 9V, 14, 18C, 19A, 19F, and 23F). *S. pneumoniae* were classified as non-typeable if a serotype could not be determined *in silico*.
 
 ### 1.2. Results
 
-#### 1.2.1. EpiData
+### 1.2.1. EpiData
 
-The consensus based on selected variables to final_pneumo_decision = positive/negative
+A total number of 900 children were evenly assessed from Lombok (n = 450, 50%) and Sumbawa (n = 450, 50%), with a slightly higher pneumococcal carriage in Sumbawa (n = 204, 45.33%) compared to Lombok (n = 192, 42.67%). Males and females were almost equally represented in the study, with 48.78% (n = 439) being male and 51.22% (n = 461) being female. The pneumococcal positivity rate was slightly lower among males (42.82% (188/439)) compared to females (45.12% (208/461)).
+
+Among children assessed in Lombok, 3.78% (17/450) were under 1 year of age, with a pneumococcal positivity rate of 47.06% (8/17). In Sumbawa, 34.67% (156/450) of children were under 1 year, with a similar positivity rate of 44.87% (70/156). Overall, 19.22% (173/900) of the total study population was in this age group, with 45.09% (78/173) testing positive. For children aged 1–2 years, 36.67% (165/450) of those in Lombok were assessed, and 46.67% (77/165) were positive, while in Sumbawa, 42.44% (191/450) were assessed, with a 46.6% (89/191) positivity rate. Across both islands, 39.56% (356/900) of children were in this age group, with 46.63% (166/356) testing positive. Among children aged 3–5 years, 59.56% (268/450) in Lombok were assessed, with 39.93% (107/268) testing positive. In Sumbawa, this age group accounted for 22.89% (103/450) of the population, with a positivity rate of 43.69% (45/103). Overall, 41.22% (371/900) of children were in this category, with a pneumococcal positivity rate of 40.97% (152/371).
+
+Children who received three doses of the Hib pentavalent vaccine accounted for 51% (n = 459) of the study population, with a positivity rate of 45.1% (n = 207). Those who received four doses made up 49% (n = 441), with a slightly lower positivity rate of 42.86% (n = 189). Children who received one to two mandatory doses of the PCV13 accounted for 40.56% (n = 365) of the study population, with a positivity rate of 41.37% (n = 151). Those who received three to four doses made up 59.44% (n = 535), with a slightly higher positivity rate of 45.79% (n = 245).
+
+Table 1
 
 ```{r}
-# xxx
+report_epiTable <- 
+  #read.csv("../outputs/epi_all_descriptive_percentages_report.csv") %>% 
+  read.csv("../outputs/epi_all_descriptive_percentages_report_with_pValues.csv") %>% 
+  dplyr::rename_with(~ gsub("report_", "", .x)) %>% 
+  dplyr::mutate(estimate = round(estimate, 3),
+                lower = round(lower, 3),
+                upper = round(upper, 3),
+                midp.exact = round(midp.exact, 3),
+                fisher.exact = round(fisher.exact, 3),
+                chi.square = round(chi.square, 3))
 
+DT::datatable(report_epiTable, filter = "top",
+              options = list(
+                dom = 'Bfrtip',  # 'B' enables buttons, 'frtip' keeps search/filtering
+                buttons = list('colvis'),  # column visibility toggle
+                pageLength = 10,
+                lengthMenu = list(c(5, 10, 25, -1),
+                                  c("5 rows", "10 rows", "25 rows", "All"))
+                ),
+              extensions = 'Buttons')
 ```
 
-#### 1.2.2. Genome data
+### 1.2.2. Genome data
 
 Filter out the data:
 
@@ -44,7 +73,7 @@ MLST, pneumoKITy and contamination profiles.
 
 vaccine-types and non-vaccine-types
 
-## 2. Epidemiological modelling and analyses
+## 2. Modelling
 
 ### 2.1. Methods
 
@@ -54,7 +83,7 @@ We used logistic regression models to obtain crude odds ratios (ORs) and adjuste
 
 ### 2.2. Results
 
-#### 2.2.1. EpiData
+### 2.2.1. EpiData
 
 sssss
 
@@ -62,7 +91,7 @@ Justifications for selecting multivariable logistic regression with backwise ste
 
 No statistically significant results occured among variables.
 
-#### 2.2.2. Genome data
+### 2.2.2. Genome data
 
 ssssss
 
