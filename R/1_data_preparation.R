@@ -269,6 +269,10 @@ df_epi_clean <- df_epi_merged %>%
       is.na(illness_past24h_difficulty_breathing) ~ "no",
       TRUE ~ illness_past24h_difficulty_breathing
     ),
+    illness_past24h_difficulty_compiled = case_when(
+      illness_past24h_cough == "no" & illness_past24h_runny_nose == "no" & illness_past24h_difficulty_breathing == "no" ~ "no",
+      TRUE ~ "≥ 1 respiratory illness",
+    ),
     vaccination_hibpentavalent_dc_n_regroup = case_when(
       vaccination_hibpentavalent_dc_n < 4 ~ "1-3 mandatory",
       vaccination_hibpentavalent_dc_n >= 4 ~ "4 booster"

@@ -39,6 +39,7 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     illness_past24h_cough = as.factor(illness_past24h_cough),
     illness_past24h_runny_nose = as.factor(illness_past24h_runny_nose),
     illness_past24h_difficulty_breathing = as.factor(illness_past24h_difficulty_breathing),
+    illness_past24h_difficulty_compiled = as.factor(illness_past24h_difficulty_compiled),
     antibiotic_past3days = as.factor(antibiotic_past3days),
     antibiotic_past1mo = as.factor(antibiotic_past1mo),
     age_year_2groups = factor(age_year_2groups,
@@ -63,7 +64,9 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
 col_map <- c(
   # final_pneumo_decision
   "positive" = "steelblue",
-  "negative" = "indianred2"
+  "negative" = "indianred2",
+  "lombok" = "orange",
+  "sumbawa" = "seagreen4"
 )
 
 column_names <- setdiff(names(df_epi), "final_pneumo_decision")
@@ -142,7 +145,55 @@ for (column in column_names){
     dev.off()
     
   }
+}
+
+column_names_area <- setdiff(names(df_epi), c("area", "final_pneumo_decision"))
+for (column in column_names_area){
+  df_summary <- df_epi %>% 
+    # dplyr::filter(final_pneumo_decision == "positive") %>%
+    dplyr::group_by(area, final_pneumo_decision, !!sym(column)) %>%
+    dplyr::summarise(count = n(), .groups = "drop") %>% 
+    glimpse()
   
+  f_name <- paste0("barplot_", column, "_areaGrouped.png")
+  f_path <- file.path("pictures/2_clean_data_descriptive", paste0(f_name))
+  
+  count <- ggplot(df_summary,
+                  aes(x = !!sym(column), y = count,
+                      fill = area)) + 
+    geom_bar(position = "dodge", stat = "identity") + 
+    geom_text(aes(label = count), 
+              position = position_dodge(width = 0.9),
+              vjust = 1.05) +
+    scale_fill_manual(values = c(col_map)) +
+    labs(y = "Count",
+         x = "") + 
+    theme_bw() +
+    theme(legend.position="none") +
+    facet_wrap(~final_pneumo_decision,nrow=1)
+  
+  proportion <- ggplot(df_summary,
+                       aes(x = !!sym(column), y = count,
+                           fill = area)) + 
+    geom_bar(position = "fill", stat = "identity") + 
+    # geom_text(aes(label = proportion), 
+    #           position = position_dodge(width = 0.9),
+    #           vjust = 1.05) +
+    scale_fill_manual(values = c(col_map)) +
+    labs(y = "Proportion",
+         x = "") + 
+    theme_bw() +
+    theme(legend.position="none") +
+    facet_wrap(~final_pneumo_decision,nrow=1)
+  
+  # Cowplot
+  p1 <- cowplot::plot_grid(count, proportion,
+                           ncol = 2,
+                           labels = c("A", "B"))
+  
+  png(file = f_path, width = 23, height = 6, unit = "cm", res = 600)
+  print(p1)
+  dev.off()
 }
 
 # based on visual inspection,

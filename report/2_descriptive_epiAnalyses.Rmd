@@ -20,7 +20,7 @@ pacman::p_load(reactable, tidyverse, plotly)
 
 ### 1.1. Methods
 
-Pneumococcal carriage following PCV13 immunisation was assessed among children in two islands of Lesser Sunda Archipelago, Lombok and Sumbawa. We incorporated age group (\<1 year, 1-2 years, 3-5 years) along with other factors potentially influencing pneumococcal colonisation. *S. pneumoniae* species identification was determined using the combination of culture-based methods (physical characteristics and optochin assessment) and whole genome sequencing (WGS)-based approaches.
+Pneumococcal carriage following PCV13 immunisation was assessed among children in two islands of Lesser Sunda Archipelago, Lombok and Sumbawa. We incorporated age group (\<1 year, 1-2 years, 3-5 years) along with other factors potentially influencing pneumococcal colonisation. *S. pneumoniae* species identification was determined using the combination of culture-based methods (physical characteristics and optochin assessment) and whole genome sequencing (WGS)-based approaches. I also test area as a potential confounder by implementing chi-square tests method from
 
 To ensure accuracy on species identification, we evaluated the quality of genome assembly using **Bioconda::assembly-stats** (developed by Sanger Pathogens) and classified genomes into two categories: those with a genome length 1.9 Mb-2.3 Mb were considered pure pneumococcal genomes while those outside the ranges were classified as pneumococcal genomes with intra-species contamination. Further validation was performed using Torsten Seemann's **MLST** toolset, which conducts **BLAST** analysis on seven housekeeping genes. Multiple-serotype contamination was examined using Sheppard et al.'s **pneumoKITy**. Additionally, we uploaded the data to PathogenWatch (<http://pathogen.watch>) to obtain *in silico* identification of pneumococcus including their serotype determination, Global Pneumococcal Sequence Cluster (GPSC) classification, sequence type (ST), and antibiotic resistance profiling.
 
@@ -63,6 +63,8 @@ DT::datatable(report_epiTable, filter = "top",
 
 ### 1.2.2. Genome data
 
+Pending
+
 Filter out the data:
 
 From positive samples, how many data failed to be processed due to RNA contaminations, etc.
@@ -77,19 +79,81 @@ vaccine-types and non-vaccine-types
 
 ### 2.1. Methods
 
-This
-
-We used logistic regression models to obtain crude odds ratios (ORs) and adjusted ORs (adjusted by study site) to evaluate factors associated with pneumococcal carriage prevalence. We applied a multivariable logistic regression model to evaluate factors independently associated with pneumococcal carriage; a stepwise backwards elimination process was applied to the full model including all covariates, and variables were removed from the model when 0.05 significance level was not met. Data analyses were performed using Stata (version 15.0) and SAS (version 9.4) software. P values \<0.05 were considered statistically significant.
+To determine the factors associated with the prevalence of pneumococcal carriage, we first tested area as a potential confounding factor. We then implemented a multivariable logistic regression model with a stepwise backward elimination process, including all covariates from a set of selected variables that exhibited no high collinearity. Variables with a significance level greater than 0.05 were removed from the model. All statistical analyses and data visualizations were performed using R version 4.4.3. P values \< 0.05 were considered statistically significant.
 
 ### 2.2. Results
 
 ### 2.2.1. EpiData
 
-sssss
+Having more children in a household was strongly associated with pneumococcal carriage:
 
-Justifications for selecting multivariable logistic regression with backwise step.
+Runny nose in the past 24 h (adjusted OR = 1.62, 95% CI = 1.19-2.22) was significantly associated with pneumococcal carriage, while other variables were considered not statistically significant. Oddly enough, contact with other children have a decreasing effect in pneumococcal carriage (adjusted OR = 0.66, 95% CI = 0.44-0.99). In a multivariate analysis,
 
-No statistically significant results occured among variables.
+In a multivariate analysis, the odds of pneumococcal carriage varied significantly by several characteristics: children aged 1–2 years had a 1.7-fold-increased odds compared to children aged \<1 year (*P* = 0.0008), households with the presence of other children \<5 years old had a 1.9-fold-increased odds compared to those without (*P*\<0.0001), households with 4–6 persons had a 0.8-fold-decreased odds compared to households with 2–3 persons (*P* = 0.012), households using wood only as the primary fuel source had a 4.8-fold-increased odds (*P*\<0.0001) while households using wood with any other source had a 0.8-fold-decreased odds (*P*\<0.0001) compared to households using LPG or kerosene only, exposure to cigarette smoke in the household was associated with a 0.8-fold-decreased odds (*P* = 0.034), and the presence of ≥1 symptom of respiratory illness was associated with a 2.8 fold-increased odds (*P*\<0.0001) ([Table 2](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0297041#pone-0297041-t002)).
+
+```{r}
+# same data but focused on only final model plus filtered variables
+report_model <- 
+  read.csv("../outputs/epi_all_final_models.csv") %>% 
+  dplyr::select(variable, value,
+                univar_crude_OR_report, univar_crude_p.value,
+                univar_plusArea_report, univar_plusArea_p.value,
+                multivar_model1_report_OR, multivar_model1_p_value,
+                # multivar_model2_report_OR, multivar_model2_p_value,
+                multivar_final_report_OR, multivar_final_prz) %>% 
+  dplyr::mutate(univar_crude_p.value = round(univar_crude_p.value, 2),
+                univar_plusArea_p.value = round(univar_plusArea_p.value, 2),
+                multivar_model1_p_value = round(multivar_model1_p_value, 2),
+                # multivar_model2_p_value = round(multivar_model2_p_value, 2),
+                multivar_final_prz = round(multivar_final_prz, 2))
+
+DT::datatable(report_model, filter = "top",
+              options = list(
+                dom = 'Bfrtip',  # 'B' enables buttons, 'frtip' keeps search/filtering
+                buttons = list('colvis'),  # column visibility toggle
+                pageLength = 10,
+                lengthMenu = list(c(5, 10, 25, -1),
+                                  c("5 rows", "10 rows", "25 rows", "All"))
+                ),
+              extensions = 'Buttons')
+```
+
+```{r}
+# same data but focused on only final model plus filtered variables
+report_model_filtered <- 
+  read.csv("../outputs/epi_all_final_models.csv") %>% 
+  dplyr::select(variable, value,
+                univar_crude_OR_report, univar_crude_p.value,
+                univar_plusArea_report, univar_plusArea_p.value,
+                multivar_model1_report_OR, multivar_model1_p_value,
+                # multivar_model2_report_OR, multivar_model2_p_value,
+                multivar_final_report_OR, multivar_final_prz) %>% 
+  dplyr::mutate(univar_crude_p.value = round(univar_crude_p.value, 2),
+                univar_plusArea_p.value = round(univar_plusArea_p.value, 2),
+                multivar_model1_p_value = round(multivar_model1_p_value, 2),
+                # multivar_model2_p_value = round(multivar_model2_p_value, 2),
+                multivar_final_prz = round(multivar_final_prz, 2)) %>% 
+  dplyr::filter(!is.na(multivar_final_prz),
+                value != "(Intercept)")
+
+DT::datatable(report_model_filtered, filter = "top",
+              options = list(
+                dom = 'Bfrtip',  # 'B' enables buttons, 'frtip' keeps search/filtering
+                buttons = list('colvis'),  # column visibility toggle
+                pageLength = 10,
+                lengthMenu = list(c(5, 10, 25, -1),
+                                  c("5 rows", "10 rows", "25 rows", "All"))
+                ),
+              extensions = 'Buttons')
+```
+
+Sort of goodness of fit
+
+```{r}
+knitr::include_graphics("../pictures/epiAnalyses_all_multivariable_final_model.png")
+```
+
+However, the analysis indicated that area was not a confounder
 
 ### 2.2.2. Genome data
 

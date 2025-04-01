@@ -39,6 +39,8 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     illness_past24h_cough = as.factor(illness_past24h_cough),
     illness_past24h_runny_nose = as.factor(illness_past24h_runny_nose),
     illness_past24h_difficulty_breathing = as.factor(illness_past24h_difficulty_breathing),
+    illness_past24h_difficulty_compiled = factor(illness_past24h_difficulty_compiled,
+                                                 levels = c("no", "≥ 1 respiratory illness")),
     antibiotic_past3days = as.factor(antibiotic_past3days),
     antibiotic_past1mo = as.factor(antibiotic_past1mo),
     age_year_2groups = factor(age_year_2groups,
@@ -58,7 +60,7 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     final_pneumo_decision = factor(final_pneumo_decision,
                                    levels = c("negative", "positive"))
   ) %>% 
-  dplyr::select(sort(names(df_epi))) %>% 
+  dplyr::select(sort(names(.))) %>% 
   dplyr::select(final_pneumo_decision,
                 age_year_3groups,
                 contains("antibiotic"),
@@ -132,21 +134,23 @@ or_matrix_all <- generate_or_matrix_report(df_input = df_epi,
 or_matrix_table_report <- dplyr::full_join(
   purrr::imap_dfr(or_matrix_all, ~{
     df <- .x$measure
-    if (is.null(df)) return(NULL)
-    
-    df %>%
-      as.data.frame() %>%
-      dplyr::mutate(variable = .y, value = rownames(df)) %>%
-      dplyr::relocate(variable, value) # Moves to first columns
+    if (!is.null(df)){
+      df %>%
+        as.data.frame() %>%
+        tibble::rownames_to_column("value") %>%
+        dplyr::mutate(variable = .y, value = rownames(df)) %>%
+        dplyr::relocate(variable, value) # Moves to first columns
+    }
   }),
   purrr::imap_dfr(or_matrix_all, ~{
     df <- .x$p.value
-    if (is.null(df)) return(NULL)
-    
-    df %>%
-      as.data.frame() %>%
-      dplyr::mutate(variable = .y, value = rownames(df)) %>%
-      dplyr::relocate(variable, value)
+    if (!is.null(df)){
+      df %>%
+        as.data.frame() %>%
+        tibble::rownames_to_column("value") %>%
+        dplyr::mutate(variable = .y) %>%
+        dplyr::relocate(variable, value)
+    }
   }),
   by = c("variable", "value")
 ) %>% 
@@ -165,8 +169,12 @@ or_matrix_table_report <- dplyr::full_join(
 compile_all_report_with_pValues <- dplyr::left_join(
   read.csv("outputs/epi_all_descriptive_percentages_report.csv"),
   or_matrix_table_report,
-  by = c("variable", "value")
+  by = c("variable"),
+  relationship = "many-to-many"
 ) %>% 
+  dplyr::filter(estimate != 1) %>% # rese amat
+  dplyr::select(-value.y) %>% 
+  dplyr::rename(value = value.x) %>% 
   # view() %>%
   glimpse()
 
@@ -201,7 +209,7 @@ or_univar_model_report <- purrr::imap_dfr(or_univar_all, ~{
                 OR_upper_CI = exp(estimate + 1.96 * std.error),
                 significance = case_when(
                   p.value < 0.05 ~ "occur",
-                  !is.na(p.value) ~ "not occur",
+                  !is.na(p.value) ~ "no",
                   TRUE ~ NA_character_)
   ) %>% 
   dplyr::arrange(variable) %>% 
@@ -219,7 +227,7 @@ or_univar_model_report <- purrr::imap_dfr(or_univar_all, ~{
                 crude_df_null, crude_df_residual, crude_AIC) %>% 
   glimpse()
 
-# try glm crude OR plus area report
+# try univariable glm crude OR plus area report
 or_univar_all_plusArea <- generate_univar_plusArea_report(df_input = df_epi_chars %>% 
                                           dplyr::select(where(~ all(!is.na(.)))),
                                         binary_disease = "final_pneumo_decision")
@@ -247,7 +255,7 @@ or_univar_model_plusArea_report <- purrr::imap_dfr(or_univar_all_plusArea, ~{
                 OR_upper_CI = exp(estimate + 1.96 * std.error),
                 significance = case_when(
                   p.value < 0.05 ~ "occur",
-                  !is.na(p.value) ~ "not occur",
+                  !is.na(p.value) ~ "no",
                   TRUE ~ NA_character_)
   ) %>% 
   dplyr::arrange(variable) %>% 
@@ -265,7 +273,7 @@ or_univar_model_plusArea_report <- purrr::imap_dfr(or_univar_all_plusArea, ~{
                 plusArea_df_null, plusArea_df_residual, plusArea_AIC) %>% 
   glimpse()
 
-compilse_crude_plusArea <- dplyr::left_join(
+compile_crude_plusArea <- dplyr::left_join(
   or_univar_model_plusArea_report, or_univar_model_report,
   by = c("variable", "value")
 ) %>% 
@@ -280,7 +288,8 @@ or_multivariable_all <- generate_multivar_report(df_input = df_epi_chars %>%
                                                    dplyr::select(where(~ all(!is.na(.)))),
                                                  binary_disease = "final_pneumo_decision") 
 
-saveRDS(or_multivariable_all, "outputs/epi_all_multivariable_logistic_regression_model.rds")
+saveRDS(or_multivariable_all,
+        "outputs/epi_all_multivariable_logistic_regression_model.rds")
 # test <- readRDS("outputs/epi_all_multivariable_logistic_regression_model.rds")
 
 # generate pictures
@@ -289,20 +298,39 @@ png(file = "pictures/epiAnalyses_all_multivariable_model1.png",
 performance::check_model(or_multivariable_all$model1)
 dev.off()
 
-png(file = "pictures/epiAnalyses_all_multivariable_model2.png",
-    width = 23, height = 23, unit = "cm", res = 600)
-performance::check_model(or_multivariable_all$model2)
-dev.off()
+# ignore multicollinearity test
+# png(file = "pictures/epiAnalyses_all_multivariable_model2.png",
+#     width = 23, height = 23, unit = "cm", res = 600)
+# performance::check_model(or_multivariable_all$model2)
+# dev.off()
 
-png(file = "pictures/epiAnalyses_all_multivariable_final_model_wider.png",
+png(file = "pictures/epiAnalyses_all_multivariable_final_model.png",
     width = 23, height = 23, unit = "cm", res = 600)
 final_model_reconvert <- glm(formula(or_multivariable_all$final_model),
                              family = binomial, data = df_epi_chars)
 performance::check_model(final_model_reconvert)
 dev.off()
 
+# additional analysis for plusArea
+formula_plusArea <- as.formula(final_pneumo_decision ~ 
+                             area + contact_cigarettes + contact_otherChildren
+                             + illness_past24h_runny_nose + n_child_1to2yo)
+final_model_plusArea <- glm(formula_plusArea,
+                            family = binomial, data = df_epi_chars)
 
-# generate justufucation report
+png(file = "pictures/epiAnalyses_all_multivariable_final_model_wider_plusArea.png",
+    width = 23, height = 23, unit = "cm", res = 600)
+performance::check_model(final_model_plusArea)
+dev.off()
+
+final_model_area_comparison <- anova(final_model_reconvert,
+                                     final_model_plusArea,
+                                     test = "Chisq")
+saveRDS(final_model_area_comparison,
+        "outputs/epi_all_multivariable_logistic_regression_model_area_comparison.rds")
+
+
+# generate justification report
 df_models <- data.frame(
   Variable = names(coef(or_multivariable_all$model1)),
   Odds_Ratio = or_multivariable_all$odds_ratio1,
@@ -312,19 +340,20 @@ df_models <- data.frame(
   row.names = NULL
 ) %>% 
   dplyr::rename_all(~ paste0("model1_", .)) %>% 
-  dplyr::left_join(
-    data.frame(
-      Variable = names(coef(or_multivariable_all$model2)),
-      Odds_Ratio = or_multivariable_all$odds_ratio2,
-      Lower_CI = or_multivariable_all$lower_CI2,
-      Upper_CI = or_multivariable_all$upper_CI2,
-      P_Value = or_multivariable_all$p_value2,
-      row.names = NULL
-    ) %>% 
-      dplyr::rename_all(~ paste0("model2_", .))
-    ,
-    by = c("model1_Variable" = "model2_Variable")
-  ) %>% 
+  # ignore multicollinearity check
+  # dplyr::left_join(
+  #   data.frame(
+  #     Variable = names(coef(or_multivariable_all$model2)),
+  #     Odds_Ratio = or_multivariable_all$odds_ratio2,
+  #     Lower_CI = or_multivariable_all$lower_CI2,
+  #     Upper_CI = or_multivariable_all$upper_CI2,
+  #     P_Value = or_multivariable_all$p_value2,
+  #     row.names = NULL
+  #   ) %>% 
+  #     dplyr::rename_all(~ paste0("model2_", .))
+  #   ,
+  #   by = c("model1_Variable" = "model2_Variable")
+  # ) %>% 
   dplyr::left_join(
     as.data.frame(or_multivariable_all$final_model[["coefficients"]]) %>%
       tibble::rownames_to_column(var = "Variable") %>% 
@@ -354,27 +383,54 @@ df_models <- data.frame(
     by = c("model1_Variable" = "final_Variable")
   ) %>% 
   dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
+  dplyr::rename(variable_value = model1_variable) %>% 
+  dplyr::mutate(
+    model1_report_OR = paste0(round(model1_odds_ratio, 2),
+                              " (", round(model1_lower_ci, 2),
+                              "-", round(model1_upper_ci, 2), ")"),
+    # model2_report_OR = paste0(round(model2_odds_ratio, 2),
+    #                           " (", round(model2_lower_ci, 2),
+    #                           "-", round(model2_upper_ci, 2), ")"),
+    final_report_OR = paste0(round(final_adjusted_odds_ratio, 2),
+                             " (", round(final_lower_ci, 2),
+                             "-", round(final_upper_ci, 2), ")")
+  ) %>% 
   # view() %>% 
   glimpse()
 
-write.csv(df_models, "outputs/epi_all_final_models.csv", row.names = F)
+# combine models with univariable analysis result
+df_models_all <- dplyr::left_join(
+  compile_crude_plusArea %>% 
+    dplyr::rename_all(~ paste0("univar_", .)) %>% 
+    dplyr::rename(variable = univar_variable,
+                  value = univar_value)
+  ,
+  df_models %>% 
+    dplyr::rename_all(~ paste0("multivar_", .)) %>% 
+    dplyr::rename(variable_value = multivar_variable_value)
+  ,
+  by = c("value" = "variable_value")
+)
+
+
+write.csv(df_models_all, "outputs/epi_all_final_models.csv", row.names = F)
 
 # convert multicollinearity test
-df_multicol <- as.data.frame(or_multivariable_all$multicollinearity_test1) %>% 
-  tibble::rownames_to_column(var = "Variable") %>% 
-  dplyr::rename_all(~ paste0("multicol1_", .)) %>% 
-  dplyr::left_join(
-    as.data.frame(or_multivariable_all$multicollinearity_test2) %>% 
-      tibble::rownames_to_column(var = "Variable") %>% 
-      dplyr::rename_all(~ paste0("multicol2_", .))
-    ,
-    by = c("multicol1_Variable" = "multicol2_Variable")
-  ) %>% 
-  dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
-  # view() %>% 
-  glimpse()
-
-write.csv(df_multicol, "outputs/epi_all_multicollinearity_test.csv", row.names = F)
+# df_multicol <- as.data.frame(or_multivariable_all$multicollinearity_test1) %>% 
+#   tibble::rownames_to_column(var = "Variable") %>% 
+#   dplyr::rename_all(~ paste0("multicol1_", .)) %>% 
+#   dplyr::left_join(
+#     as.data.frame(or_multivariable_all$multicollinearity_test2) %>% 
+#       tibble::rownames_to_column(var = "Variable") %>% 
+#       dplyr::rename_all(~ paste0("multicol2_", .))
+#     ,
+#     by = c("multicol1_Variable" = "multicol2_Variable")
+#   ) %>% 
+#   dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
+#   # view() %>% 
+#   glimpse()
+# 
+# write.csv(df_multicol, "outputs/epi_all_multicollinearity_test.csv", row.names = F)
 
 # convert model comparison ANOVA into a dataframe (see the *.rds file instead!)
 # df_model_comparison <- as.data.frame(or_multivariable_all$model_comparison) %>% 
@@ -382,11 +438,26 @@ write.csv(df_multicol, "outputs/epi_all_multicollinearity_test.csv", row.names =
 
 # doesn't matter. Don't think multivariable logistic is the best model
 # coz' the data comes from carriage states.
-model_goodness_of_fit <- generate_goodnes_of_fit_report(df_input = df_epi_chars,
-                                                       binary_disease = "final_pneumo_decision",
-                                                       final_model = or_multivariable_all$final_model,
-                                                       h_group = 5) # based on 100 < n data < 1000
-model_goodness_of_fit
+# model_goodness_of_fit <- generate_goodnes_of_fit_report(df_input = df_epi_chars,
+#                                                        binary_disease = "final_pneumo_decision",
+#                                                        final_model = or_multivariable_all$final_model,
+#                                                        h_group = 5) # based on 100 < n data < 1000
+# model_goodness_of_fit
+# ResourceSelection::hoslem.test(df_epi_chars$final_pneumo_decision, fitted(final_model_reconvert))
+
+# pred <- stats::predict(final_model_reconvert, type = "response")
+# roc_curve <- pROC::roc(df_epi_chars$final_pneumo_decision, pred)
+# plot(roc_curve)
+# pROC::auc(roc_curve)  # Higher AUC = better model
+
+# ctrl <- caret::trainControl(method = "cv", number = 10)
+# cv_model <- caret::train(as.formula(final_pneumo_decision ~ 
+#                                       contact_cigarettes + contact_otherChildren
+#                                     + illness_past24h_runny_nose + n_child_1to2yo), data = df_epi_chars,
+#                          method = "glm", family = "binomial", trControl = ctrl)
+# cv_model
+# cv_model$results
+# cv_model$finalModel
 
 
 # epiAnalyses for genome data (subset to positive pneumo only) #################
