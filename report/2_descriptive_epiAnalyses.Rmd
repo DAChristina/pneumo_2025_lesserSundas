@@ -30,11 +30,15 @@ The vaccine serotypes included in PCV13 (1, 3, 4, 5, 6A, 6B, 7F, 9V, 14, 18C, 19
 
 ### 1.2.1. EpiData
 
-A total number of 900 children were evenly assessed from Lombok (n = 450, 50%) and Sumbawa (n = 450, 50%), with a slightly higher pneumococcal carriage in Sumbawa (n = 204, 45.33%) compared to Lombok (n = 192, 42.67%). Males and females were almost equally represented in the study, with 48.78% (n = 439) being male and 51.22% (n = 461) being female. The pneumococcal positivity rate was slightly lower among males (42.82% (188/439)) compared to females (45.12% (208/461)).
+#### Data characteristics
 
-Among children assessed in Lombok, 3.78% (17/450) were under 1 year of age, with a pneumococcal positivity rate of 47.06% (8/17). In Sumbawa, 34.67% (156/450) of children were under 1 year, with a similar positivity rate of 44.87% (70/156). Overall, 19.22% (173/900) of the total study population was in this age group, with 45.09% (78/173) testing positive. For children aged 1–2 years, 36.67% (165/450) of those in Lombok were assessed, and 46.67% (77/165) were positive, while in Sumbawa, 42.44% (191/450) were assessed, with a 46.6% (89/191) positivity rate. Across both islands, 39.56% (356/900) of children were in this age group, with 46.63% (166/356) testing positive. Among children aged 3–5 years, 59.56% (268/450) in Lombok were assessed, with 39.93% (107/268) testing positive. In Sumbawa, this age group accounted for 22.89% (103/450) of the population, with a positivity rate of 43.69% (45/103). Overall, 41.22% (371/900) of children were in this category, with a pneumococcal positivity rate of 40.97% (152/371).
+A total number of 900 children were evenly assessed from Lombok (50%, n = 450) and Sumbawa (50%, n = 450), with equally represented males and females (48.78%, n = 439; 51.22%, n = 461, respectively). Overall, the study was dominated by children aged 3-5 years old (41.22%, n = 371), followed by children aged 1-2 years old (39.56% (39.56%, n = 356) and children below a year (19.22%, n = 173). 97.67% of the children (n = 879) were not consuming antibiotic in the past a month. Most of the children were currently breastfeed (50.44%, n = 454) or ever breastfeed (46.56%, n = 419), with only 3% of the children were never breastfed (n = 27).
 
-Children who received three doses of the Hib pentavalent vaccine accounted for 51% (n = 459) of the study population, with a positivity rate of 45.1% (n = 207). Those who received four doses made up 49% (n = 441), with a slightly lower positivity rate of 42.86% (n = 189). Children who received one to two mandatory doses of the PCV13 accounted for 40.56% (n = 365) of the study population, with a positivity rate of 41.37% (n = 151). Those who received three to four doses made up 59.44% (n = 535), with a slightly higher positivity rate of 45.79% (n = 245).
+#### Pneumococcal carriage
+
+The pneumococcal carriage rate was slightly lower among males (42.82% (188/439)) compared to females (45.12% (208/461)). A slightly higher pneumococcal carriage was observed in Sumbawa (n = 204, 45.33%) compared to Lombok (n = 192, 42.67%). Among children assessed in Lombok, 3.78% (17/450) were under 1 year of age, with a pneumococcal carriage rate of 47.06% (8/17). In Sumbawa, 34.67% (156/450) of children were under 1 year, with a similar carriage rate of 44.87% (70/156).
+
+Children who received three doses of the Hib pentavalent vaccine accounted for 51% (n = 459) of the study population, with a carriage rate of 45.1% (n = 207). Those who received four doses made up 49% (n = 441), with a slightly lower positivity rate of 42.86% (n = 189). Children who received one to two mandatory doses of the PCV13 accounted for 40.56% (n = 365) of the study population, with a positivity rate of 41.37% (n = 151). Those who received three to four doses made up 59.44% (n = 535), with a slightly higher positivity rate of 45.79% (n = 245).
 
 Table 1
 
@@ -85,11 +89,7 @@ To determine the factors associated with the prevalence of pneumococcal carriage
 
 ### 2.2.1. EpiData
 
-Having more children in a household was strongly associated with pneumococcal carriage:
-
-Runny nose in the past 24 h (adjusted OR = 1.62, 95% CI = 1.19-2.22) was significantly associated with pneumococcal carriage, while other variables were considered not statistically significant. Oddly enough, contact with other children have a decreasing effect in pneumococcal carriage (adjusted OR = 0.66, 95% CI = 0.44-0.99). In a multivariate analysis,
-
-In a multivariate analysis, the odds of pneumococcal carriage varied significantly by several characteristics: children aged 1–2 years had a 1.7-fold-increased odds compared to children aged \<1 year (*P* = 0.0008), households with the presence of other children \<5 years old had a 1.9-fold-increased odds compared to those without (*P*\<0.0001), households with 4–6 persons had a 0.8-fold-decreased odds compared to households with 2–3 persons (*P* = 0.012), households using wood only as the primary fuel source had a 4.8-fold-increased odds (*P*\<0.0001) while households using wood with any other source had a 0.8-fold-decreased odds (*P*\<0.0001) compared to households using LPG or kerosene only, exposure to cigarette smoke in the household was associated with a 0.8-fold-decreased odds (*P* = 0.034), and the presence of ≥1 symptom of respiratory illness was associated with a 2.8 fold-increased odds (*P*\<0.0001) ([Table 2](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0297041#pone-0297041-t002)).
+In a multivariate analysis, children with at least one respiratory illness in the past 24 hours had significantly higher odds of carrying pneumococcus (adjusted OR = 2.04, 95% CI = 1.39-3). The presence of other children in a household showed an association with pneumococcal carriage, although with no statistical significance: other children below 1 year old (adjusted OR = 1.8, 95% CI = 0.81-4.2, p = 0.16).
 
 ```{r}
 # same data but focused on only final model plus filtered variables
@@ -134,7 +134,8 @@ report_model_filtered <-
                 # multivar_model2_p_value = round(multivar_model2_p_value, 2),
                 multivar_final_prz = round(multivar_final_prz, 2)) %>% 
   dplyr::filter(!is.na(multivar_final_prz),
-                value != "(Intercept)")
+                value != "(Intercept)"
+                )
 
 DT::datatable(report_model_filtered, filter = "top",
               options = list(

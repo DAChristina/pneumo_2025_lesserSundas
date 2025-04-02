@@ -210,7 +210,7 @@ df_epi_clean <- df_epi_merged %>%
     healthcareVisit_last_3mo_reason_rash = apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_ruam,
     healthcareVisit_last_3mo_reason_others = apakah_alasan_anak_tersebut_mengunjungi_fasilitas_kesehatan_tersebut_lainlain,
     illness_past3days_fever = apakah_anak_sedangpernah_mengalami_demam_dalam_3_hari_terakhir_ini,
-    illness_past3days_fever_howManyDays = jika_ya_berapa_hari_anak_tersebut_mengalami_demam_jika_tidak_isi_,
+    illness_past3days_fever_nDays = jika_ya_berapa_hari_anak_tersebut_mengalami_demam_jika_tidak_isi_,
     # illness_past24h = dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami,
     illness_past24h_cough = dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami_batuk,
     illness_past24h_runny_nose = dalam_waktu_24_jam_terakhir_ini_apakah_anak_tersebut_mengalami_hidung_ingusan,
@@ -256,6 +256,15 @@ df_epi_clean <- df_epi_merged %>%
     nTotal_child_5yo_andBelow_sleep_regroup = case_when(
       nTotal_child_5yo_andBelow_sleep == 0 ~ "0",
       nTotal_child_5yo_andBelow_sleep >= 0 ~ "1-3"
+    ),
+    illness_past3days_fever_regroup = case_when(
+      illness_past3days_fever == "unknown" ~ "no",
+      TRUE ~ illness_past3days_fever
+    ),
+    illness_past3days_fever_nDays_regroup = case_when(
+      illness_past3days_fever_nDays == "no" ~ "0",
+      illness_past3days_fever_nDays == "yes" ~ "2", # mode
+      TRUE ~ illness_past3days_fever_nDays
     ),
     illness_past24h_cough = case_when(
       is.na(illness_past24h_cough) ~ "no",
@@ -585,6 +594,32 @@ df_gen_all <- dplyr::left_join(
     by = "workFasta_name_with_extension"
   ) %>% 
   dplyr::left_join(
+    read.csv("raw_data/result_assembly_stats/compiled_assembly_stats.csv") %>% 
+      dplyr::rename_all(~ paste0("workWGS_stats_", .)) %>% 
+      dplyr::mutate(workWGS_stats_pneumo_cutoff = case_when(
+        workWGS_stats_sum >= 1900000 & workWGS_stats_sum <= 2300000 ~ "predicted pure pneumo",
+        workWGS_stats_sum < 1900000 ~ "< 1.9 Mb",
+        workWGS_stats_sum > 2300000 ~ "> 2.3 Mb",
+      ))
+    ,
+    join_by("workFasta_name_with_extension" == "workWGS_stats_my_ID")
+  ) %>% 
+  dplyr::left_join(
+    read.table("raw_data/result_blast_refgenes/blastn_tabular_lytA.txt", head = F) %>% 
+      dplyr::rename_with(~ c("file_name", "qseqid", "sseqid", "pident", "length", "mismatch",
+                             "gapopen", "qstart", "qend", "sstart", "send",
+                             "evalue", "bitscore")) %>% 
+      dplyr::rename_all(~ paste0("workBLAST_lytA_", .)) %>% 
+      dplyr::mutate(workFasta_name = gsub("_lytA_blastn_tabular.txt", "", workBLAST_lytA_file_name),
+                    workBLAST_lytA_predicted_species = case_when(
+                      workBLAST_lytA_pident >= 98 ~ "predicted pure pneumo",
+                      TRUE ~ "not pneumococcus"
+                    )) %>% 
+      dplyr::select(-workBLAST_lytA_file_name, -workBLAST_lytA_qseqid, -workBLAST_lytA_sseqid)
+    ,
+    by = "workFasta_name"
+  ) %>% 
+  dplyr::left_join(
     read.csv("raw_data/result_mlst/mlst_results.csv", header = F, sep = "\t") %>% 
       stats::setNames(c("workFasta_name_with_extension", "workWGS_MLST_dc_species", "workWGS_MLST_dc_ST",
                         "workWGS_MLST_dc_aroe", "workWGS_MLST_dc_gdh", "workWGS_MLST_dc_gki",
@@ -602,17 +637,6 @@ df_gen_all <- dplyr::left_join(
     by = "workFasta_name_with_extension"
   ) %>% 
   dplyr::left_join(
-    read.csv("raw_data/result_assembly_stats/compiled_assembly_stats.csv") %>% 
-      dplyr::rename_all(~ paste0("workWGS_stats_", .)) %>% 
-      dplyr::mutate(workWGS_stats_pneumo_cutoff = case_when(
-        workWGS_stats_sum >= 1900000 & workWGS_stats_sum <= 2300000 ~ "predicted pure pneumo",
-        workWGS_stats_sum < 1900000 ~ "< 1.9 Mb",
-        workWGS_stats_sum > 2300000 ~ "> 2.3 Mb",
-      ))
-    ,
-    join_by("workFasta_name_with_extension" == "workWGS_stats_my_ID")
-  ) %>% 
-  dplyr::left_join(
     read.csv("raw_data/result_pneumokity/Collated_result_data.csv") %>% 
       dplyr::rename_all(~ paste0("workWGS_kity_", .)) %>% 
       dplyr::mutate(
@@ -620,7 +644,7 @@ df_gen_all <- dplyr::left_join(
         workWGS_kity_predicted_serotype_regroup = case_when(
           grepl("Below",  workWGS_kity_predicted_serotype) ~ "acapsular",
           grepl("Mixed",  workWGS_kity_predicted_serotype) ~ "mixed serotypes/serogroups",
-          workWGS_kity_predicted_serotype == "Serogroup/6/(6E)" ~ "6E",
+          workWGS_kity_predicted_serotype == "Serogroup/6/(6E)" ~ "serogroup 6 (6B/6E)",
           TRUE ~ workWGS_kity_predicted_serotype
         )
       )
@@ -639,7 +663,7 @@ df_gen_all_sp_comparison <- df_gen_all %>%
                 workWGS_success_failed,
                 workWGS_species_pw, workWGS_MLST_dc_species,
                 workWGS_stats_sum, workWGS_stats_ave, workWGS_stats_N50,
-                workWGS_stats_pneumo_cutoff,
+                workWGS_stats_pneumo_cutoff, workBLAST_lytA_predicted_species,
                 workWGS_kity_top_hits, workWGS_kity_rag_status) %>% 
   view()
 
@@ -683,6 +707,7 @@ df_final_pneumo <- read.csv("inputs/workLab_data.csv") %>%
                     # workWGS_success_failed, # trust workWGS_success_failed from workLab_data
                     workWGS_species_pw, workWGS_MLST_dc_species,
                     workWGS_stats_pneumo_cutoff,
+                    workBLAST_lytA_predicted_species,
                     workWGS_kity_top_hits, workWGS_kity_rag_status)
     ,
     by = "specimen_id"
@@ -728,11 +753,12 @@ df_final_pneumo_group <- df_final_pneumo %>%
   dplyr::group_by(workLab_culture_suspect, workLab_optochin,
                   workLab_culture_result,
                   workLab_culture_result_final, workLab_culture_notes,
+                  workBLAST_lytA_predicted_species,
                   workWGS_MLST_dc_species, workWGS_species_pw,
                   final_pneumo_decision
                   ) %>% 
   dplyr::summarise(count = n()) %>% 
-  # view() %>% 
+  view() %>%
   glimpse()
 
 # combine final_pneumo_decision to epiData
@@ -751,10 +777,36 @@ final_epiData <- read.csv("inputs/epiData.csv") %>%
 write.csv(final_epiData, "inputs/epiData_with_final_pneumo_decision.csv", row.names = F)
 
 
+# generate final PCV13 serotype decision #######################################
+# subset only for pneumo species according to genome length & MLST --> BLAST result???
+df_gen_pneumo <- read.csv("inputs/genData_all.csv") %>% 
+  dplyr::filter(workWGS_stats_pneumo_cutoff == "predicted pure pneumo",
+                workWGS_MLST_dc_species != "-", # S. christatus
+  ) %>% 
+  # dplyr::select(workWGS_serotype,
+  #               workWGS_kity_predicted_serotype,
+  #               workWGS_kity_predicted_serotype_regroup
+  # ) %>% 
+  dplyr::mutate(serotype_classification_PCV13 = case_when(
+    workWGS_kity_predicted_serotype_regroup %in% c("1", "3", "4", "5") ~ "VT",
+    str_detect(workWGS_kity_predicted_serotype_regroup, "6A|6B|7F|9V|14|18C|19A|19F|23F") ~ "VT",
+    workWGS_kity_predicted_serotype_regroup == "acapsular" ~ "acapsular",
+    TRUE ~ "NVT")) %>% 
+  # view() %>%
+  glimpse()
 
 
+# combine data to epidata (but specified only to pneumo positive)
+df_epi_gen_pneumo <- dplyr::right_join(
+  read.csv("inputs/epiData_with_final_pneumo_decision.csv"),
+  df_gen_pneumo,
+  by = "specimen_id"
+) %>% 
+  glimpse()
 
-
+write.csv(df_epi_gen_pneumo,
+          "inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv",
+          row.names = F)
 
 
 
@@ -1039,43 +1091,7 @@ write.table(non_pneumo_fasta, "raw_data/test_non_pneumo_fasta.txt",
 # I re-analyse the file in pathogenWatch & add the fasta as pneumo in temporary_df_epi_lombok_sumbawa_manual_combine_row.csv
 
 
-# Quick viz serotypes
-# Compute percentage
-df_serotype_summary <- df_epi_clean %>% 
-  dplyr::filter(!is.na(serotype_wgs)) %>% 
-  dplyr::count(serotype_wgs) %>%
-  dplyr::mutate(Percentage = n / sum(n) * 100)
 
-ggplot(df_serotype_summary, aes(x = serotype_wgs, y = Percentage,
-                                fill = serotype_wgs)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
-  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
-  labs(x = "Category", y = "Percentage", 
-       title = "All Serotypes") +
-  theme_bw() +
-  theme(legend.position = "none")
-
-# Compute percentage by area
-df_serotype_area_summary <- df_epi_clean %>% 
-  dplyr::filter(!is.na(workWGS_serotype)) %>% 
-  dplyr::group_by(area, serotype_classification_PCV13, workWGS_serotype) %>%
-  dplyr::summarise(Count = n(), .groups = "drop") %>%
-  dplyr::mutate(Percentage = Count / sum(Count) * 100,
-                serotype_classification_PCV13 = factor(serotype_classification_PCV13,
-                                                       levels = c("UNTYPABLE",
-                                                                  "VT", "NVT")))
-
-ggplot(df_serotype_area_summary, aes(x = workWGS_serotype, y = Percentage,
-                                     fill = area)) +
-  geom_bar(stat = "identity", position = position_dodge()) +
-  # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
-  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
-  labs(x = "Category", y = "Percentage", 
-       title = "All Serotypes") +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  facet_wrap(~ serotype_classification_PCV13, nrow = 3)
 
 # right_join to see undetected 49 fasta files
 df_epi_test_right_join <- dplyr::bind_rows(

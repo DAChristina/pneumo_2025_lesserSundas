@@ -13,6 +13,7 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     n_child_1to2yo = as.numeric(n_child_1to2yo),
     n_child_2to4yo = as.numeric(n_child_2to4yo),
     nTotal_child_5yo_andBelow_sleep = as.numeric(nTotal_child_5yo_andBelow_sleep),
+    illness_past3days_fever_nDays_regroup = as.numeric(illness_past3days_fever_nDays_regroup),
     hospitalised_last_3mo_n = as.numeric(hospitalised_last_3mo_n),
     healthcareVisit_last_3mo_n = as.numeric(healthcareVisit_last_3mo_n), # 1 "unknown" is replaced as NA
     # healthcareVisit_last_3mo_n = dplyr::na_if(healthcareVisit_last_3mo_n, "unknown")
@@ -35,7 +36,7 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     house_window_regroup = as.factor(house_window_regroup),
     hospitalised_last_3mo = as.factor(hospitalised_last_3mo),
     healthcareVisit_last_3mo = as.factor(healthcareVisit_last_3mo),
-    illness_past3days_fever = as.factor(illness_past3days_fever),
+    illness_past3days_fever_regroup = as.factor(illness_past3days_fever_regroup),
     illness_past24h_cough = as.factor(illness_past24h_cough),
     illness_past24h_runny_nose = as.factor(illness_past24h_runny_nose),
     illness_past24h_difficulty_breathing = as.factor(illness_past24h_difficulty_breathing),
@@ -71,8 +72,10 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
                 hospitalised_last_3mo,
                 contains("house"),
                 contains("illness"),
+                -illness_past3days_fever,
+                -illness_past3days_fever_nDays,
                 contains("n_child"),
-                nTotal_child_5yo_andBelow_regroup,
+                -nTotal_child_5yo_andBelow_regroup, # collinearity with individual n_childs
                 nTotal_child_5yo_andBelow_sleep_regroup,
                 nTotal_people_regroup,
                 sex,
@@ -128,7 +131,7 @@ cols_with_na_sums <- df_epi_chars %>%
                 NAs != 0) %>% 
   glimpse()
 
-or_matrix_all <- generate_or_matrix_report(df_input = df_epi,
+or_matrix_all <- generate_or_matrix_report(df_input = df_epi_chars,
                                            binary_disease = "area")
 
 or_matrix_table_report <- dplyr::full_join(
@@ -312,9 +315,12 @@ performance::check_model(final_model_reconvert)
 dev.off()
 
 # additional analysis for plusArea
-formula_plusArea <- as.formula(final_pneumo_decision ~ 
-                             area + contact_cigarettes + contact_otherChildren
-                             + illness_past24h_runny_nose + n_child_1to2yo)
+final_model_reconvert_variables <- attr(terms(final_model_reconvert),
+                                        "term.labels")
+
+formula_plusArea <- as.formula(paste("final_pneumo_decision ~ area +",
+                                     paste(final_model_reconvert_variables,
+                                           collapse = "+")))
 final_model_plusArea <- glm(formula_plusArea,
                             family = binomial, data = df_epi_chars)
 

@@ -31,30 +31,34 @@ Two datasheets were shared with me on 11 March 2025, consisting of epiData (mixe
 I found "frameshift mutation" in dataframe Lombok (possibly because WGS data are updated but previous WGS data were still denoted as "N/A"). And double ID for LBK_044; possibly caused by a live data updated by the lab team during laboratory analysis. I cleaned up the data directly from google sheet on 17 March 2025 and conducted data cleaning analyses locally.
 
 ```{r}
-knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-17 12-41-09.png")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-03-17 12-41-09.png")
 ```
 
 Value corrections (typographical errors) and other calculations during vaccination (HiB & PCV13)
 
 ```{r}
-knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-24 10-35-33.png")
-knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-24 10-37-38.png")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-03-24 10-35-33.png")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-03-24 10-37-38.png")
 ```
 
 Missing value (NAs) imputation using median or mode are cancelled based on common agreement at 26 March 2025; I let them empty and filter out the column for epiAnalyses:
 
 ```{r}
-knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-23 13-18-10.png")
-knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-23 13-27-18.png")
-knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-23 13-27-37.png")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-03-23 13-18-10.png")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-03-23 13-27-18.png")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-03-23 13-27-37.png")
 ```
 
 At the same time, I cleaned up the data by deleting awkward symbols and converting all values to lowercase (except for IDs). I changed "-" value to "tidak," then "no" and "ya" value to "yes". Additional inspections, such as checking for duplicated IDs (e.g. LBK_044) and ID naming inconsistencies, were performed on the real live data (the Google Sheet links).
 
-### VALIDATION NEEDED
+### VALIDATION NEEDED (I don't think I can trust the data)
 
 ```{r}
-knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-30 20-13-27.png")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-03-30 20-13-27.png")
+
+cat("specifically for fever within past 3 days...")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-04-02 12-09-15.png")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-04-02 12-21-14.png")
 ```
 
 ### 1.2. workLab data (n = 900)
@@ -78,8 +82,8 @@ In summary, species contamination occurred in some samples previously identified
 A total of 324 WGS files in \*.fasta format (including metadata) were shared to me on 11 March 2025, consisting of 189 Lombok files and 135 Sumbawa files. I generated a report for 19 missing files from Sumbawa, in the end, I obtained 21 additional files, bringing the total of 345 files (189 from Lombok and 156 from Sumbawa). Unfortunately, I found 49 files with naming inconsistencies—these files did not match their SPECIMEN ID in the epiData nor workLab_data.
 
 ```{r}
-knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-12 11-40-20.png")
-knitr::include_graphics("/home/ron/pneumo_2025_lesserSundas/report/data_cleaning_pictures/Screenshot from 2025-03-12 11-24-47.png")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-03-12 11-40-20.png")
+knitr::include_graphics("../report/data_cleaning_pictures/Screenshot from 2025-03-12 11-24-47.png")
 ```
 
 I copied these files into a separated folder and renamed them by adding an underscore ("\_") between the region code (LBK OR SWQ) and the ID number.

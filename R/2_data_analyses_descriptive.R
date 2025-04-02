@@ -13,6 +13,7 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     n_child_1to2yo = as.numeric(n_child_1to2yo),
     n_child_2to4yo = as.numeric(n_child_2to4yo),
     nTotal_child_5yo_andBelow_sleep = as.numeric(nTotal_child_5yo_andBelow_sleep),
+    illness_past3days_fever_nDays_regroup = as.numeric(illness_past3days_fever_nDays_regroup),
     hospitalised_last_3mo_n = as.numeric(hospitalised_last_3mo_n),
     healthcareVisit_last_3mo_n = as.numeric(healthcareVisit_last_3mo_n), # 1 "unknown" is replaced as NA
     # healthcareVisit_last_3mo_n = dplyr::na_if(healthcareVisit_last_3mo_n, "unknown")
@@ -35,7 +36,7 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
     house_window_regroup = as.factor(house_window_regroup),
     hospitalised_last_3mo = as.factor(hospitalised_last_3mo),
     healthcareVisit_last_3mo = as.factor(healthcareVisit_last_3mo),
-    illness_past3days_fever = as.factor(illness_past3days_fever),
+    illness_past3days_fever_regroup = as.factor(illness_past3days_fever_regroup),
     illness_past24h_cough = as.factor(illness_past24h_cough),
     illness_past24h_runny_nose = as.factor(illness_past24h_runny_nose),
     illness_past24h_difficulty_breathing = as.factor(illness_past24h_difficulty_breathing),
@@ -65,8 +66,16 @@ col_map <- c(
   # final_pneumo_decision
   "positive" = "steelblue",
   "negative" = "indianred2",
+  # area
   "lombok" = "orange",
-  "sumbawa" = "seagreen4"
+  "sumbawa" = "seagreen4",
+  # serotype groups
+  "VT" = "indianred3",
+  "NVT" = "skyblue2",
+  "acapsular" = "deepskyblue3",
+  # PCV13 groups
+  "1-2 mandatory" = "rosybrown",
+  "3-4 booster" = "paleturquoise3"
 )
 
 column_names <- setdiff(names(df_epi), "final_pneumo_decision")
@@ -211,6 +220,8 @@ df_epi_sorted <- df_epi %>%
                 hospitalised_last_3mo,
                 contains("house"),
                 contains("illness"),
+                -illness_past3days_fever,
+                -illness_past3days_fever_nDays,
                 contains("n_child"),
                 nTotal_child_5yo_andBelow_regroup,
                 nTotal_child_5yo_andBelow_sleep_regroup,
@@ -364,4 +375,245 @@ write.csv(compile_all_report, "outputs/epi_all_descriptive_percentages_report.cs
 
 
 # Data analyses process for genData ############################################
+# I separate genData to 2 groups: pneumo & interSp
+df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv") %>% 
+  dplyr::mutate(workWGS_kity_predicted_serotype_regroup = case_when(
+    workWGS_kity_predicted_serotype_regroup == "mixed serotypes/serogroups" ~ "mixed serogroups",
+    TRUE ~ workWGS_kity_predicted_serotype_regroup
+  ),
+                workWGS_kity_predicted_serotype_regroup = factor(workWGS_kity_predicted_serotype_regroup,
+                                                                 levels = c(# VT
+                                                                   "3", "6A/6B", "6A/6B/6C/6D", "serogroup 6 (6B/6E)",
+                                                                   "14", "17F", "18C/18B", "19A", "19F", "23F",
+                                                                   # NVT
+                                                                   "7C", "10A", "10B", "11A/11D", "13", "15A", "15B/15C",
+                                                                   "16F", "19B", "20", "23A", "23B", "24F/24B", "25F/25A/38",
+                                                                   "28F/28A", "31", "34", "35A/35C/42", "35B/35D", "35F",
+                                                                   "37", "39", "mixed serogroups",
+                                                                   "acapsular")),
+                serotype_classification_PCV13 = factor(serotype_classification_PCV13,
+                                                       levels = c("VT", "NVT", "acapsular"))
+                ) %>%
+  glimpse()
+
+# Quick viz serotypes
+# Compute percentage
+df_serotype_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(workWGS_kity_predicted_serotype_regroup) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::select(workWGS_kity_predicted_serotype_regroup,
+                    serotype_classification_PCV13)
+    ,
+    by = "workWGS_kity_predicted_serotype_regroup"
+  ) %>% 
+  dplyr::distinct()
+
+ser1 <- ggplot(df_serotype_summary, aes(x = workWGS_kity_predicted_serotype_regroup, y = percentage,
+                                fill = serotype_classification_PCV13)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), vjust = -0.5) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  labs(x = " ", y = "Percentage", 
+       # title = "All Serotypes"
+       ) +
+  scale_fill_manual(values = c(col_map)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom",
+        legend.title = element_blank(),
+        legend.justification = c(0.5, 0),
+        legend.margin = margin(t = -50),
+        legend.spacing.y = unit(-0.3, "cm"))
+
+# Compute percentage by area
+df_serotype_area_summary <- df_epi_gen_pneumo %>% 
+  dplyr::group_by(area, serotype_classification_PCV13, workWGS_kity_predicted_serotype_regroup) %>%
+  dplyr::summarise(count = n(), .groups = "drop") %>%
+  dplyr::mutate(percentage = count / sum(count) * 100,
+                # slightly change classifications
+                serotype_classification_PCV13 = case_when(
+                  serotype_classification_PCV13 == "acapsular" ~ " ",
+                  TRUE ~ serotype_classification_PCV13
+                ),
+                serotype_classification_PCV13 = factor(serotype_classification_PCV13,
+                                                       levels = c("VT", "NVT", " ")))
+
+ser2 <- ggplot(df_serotype_area_summary, aes(x = workWGS_kity_predicted_serotype_regroup,
+                                     y = percentage,
+                                     fill = area)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  facet_grid(~ serotype_classification_PCV13,
+             scales = "free_x",
+             space = "free_x"
+             ) +
+  scale_fill_manual(values = c(col_map)) +
+  labs(x = "Category", y = "Percentage", 
+       # title = "All Serotypes"
+       ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom",
+        legend.title = element_blank(),
+        legend.justification = c(0.5, 0),
+        legend.margin = margin(t = -50),
+        legend.spacing.y = unit(-0.3, "cm"),
+        # strip.placement = "outside",
+        strip.text.x = element_text(size = 12, face = "bold"),
+        strip.background = element_blank(),
+        # panel.spacing = unit(1, "lines"),
+        strip.position = "bottom"
+        ) # +
+  # facet_wrap(~ serotype_classification_PCV13, nrow = 1, scales = "free_x")
+
+png(file = "pictures/genData_serotypes_classification.png", width = 23, height = 25, unit = "cm", res = 600)
+cowplot::plot_grid(ser1, ser2,
+                   nrow = 2,
+                   labels = c("A", "B"))
+dev.off()
+
+# serotype classification based on vaccination period
+df_serotype_PCV13_summary <- df_epi_gen_pneumo %>% 
+  dplyr::group_by(vaccination_pcv13_dc_n, serotype_classification_PCV13) %>%
+  dplyr::summarise(count = n(), .groups = "drop") %>%
+  dplyr::mutate(percentage = count / sum(count) * 100,
+                serotype_classification_PCV13 = factor(serotype_classification_PCV13,
+                                                       levels = c("VT", "NVT", "acapsular")))
+
+ser3 <- ggplot(df_serotype_PCV13_summary, aes(x = vaccination_pcv13_dc_n,
+                                             y = percentage,
+                                             fill = serotype_classification_PCV13)) +
+  # geom_line(size = 1.5) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  geom_text(aes(label = paste0(round(percentage, 2), "%")), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.3) +
+  scale_fill_manual(values = c(col_map)) +
+  labs(x = "PCV13", y = "Percentage", 
+       # title = "All Serotypes"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5),
+        legend.position = "bottom",
+        legend.title = element_blank(),
+        legend.justification = c(0.5, 0),
+        # legend.margin = margin(t = -50),
+        legend.spacing.y = unit(-0.3, "cm"),
+        # strip.placement = "outside",
+        strip.text.x = element_text(size = 12, face = "bold"),
+        strip.background = element_blank(),
+        # panel.spacing = unit(1, "lines"),
+        strip.position = "bottom"
+  )
+
+df_serotype_PCV13_grouped <- df_epi_gen_pneumo %>% 
+  dplyr::group_by(vaccination_pcv13_dc_n_regroup, serotype_classification_PCV13, workWGS_kity_predicted_serotype_regroup) %>%
+  dplyr::summarise(count = n(), .groups = "drop") %>%
+  dplyr::mutate(percentage = count / sum(count) * 100,
+                # slightly change classifications
+                serotype_classification_PCV13 = case_when(
+                  serotype_classification_PCV13 == "acapsular" ~ " ",
+                  TRUE ~ serotype_classification_PCV13
+                ),
+                serotype_classification_PCV13 = factor(serotype_classification_PCV13,
+                                                       levels = c("VT", "NVT", " ")))
+
+ser4 <- ggplot(df_serotype_PCV13_grouped, aes(x = workWGS_kity_predicted_serotype_regroup,
+                                              y = percentage,
+                                              fill = vaccination_pcv13_dc_n_regroup)) +
+  # geom_line(size = 1.5) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  facet_grid(~ serotype_classification_PCV13,
+             scales = "free_x",
+             space = "free_x"
+  ) +
+  # geom_text(aes(label = paste0(round(percentage, 2), "%")),
+  #           position = position_dodge(width = 0.9),
+  #           vjust = -0.3) +
+  scale_fill_manual(values = c(col_map)) +
+  labs(x = "Grouped PCV13", y = "Percentage", 
+       # title = "All Serotypes"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom",
+        legend.title = element_blank(),
+        legend.justification = c(0.5, 0),
+        legend.margin = margin(t = -50),
+        legend.spacing.y = unit(-0.3, "cm"),
+        # strip.placement = "outside",
+        strip.text.x = element_text(size = 12, face = "bold"),
+        strip.background = element_blank(),
+        # panel.spacing = unit(1, "lines"),
+        strip.position = "bottom"
+  )
+
+
+png(file = "pictures/genData_serotypes_vaccination_classification.png", width = 23, height = 25, unit = "cm", res = 600)
+cowplot::plot_grid(ser3, ser4,
+                   nrow = 2,
+                   labels = c("A", "B"))
+dev.off()
+
+# trial multicowplot
+cowplot::plot_grid(ser1, ser3,
+                   ser2, ser4,
+                   nrow = 2,
+                   labels = c("A", "B", "C", "D"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# focused on inter-species
+df_gen_interSp <- read.csv("inputs/genData_all.csv") %>% 
+  dplyr::filter(workWGS_stats_pneumo_cutoff == "> 2.3 Mb") %>% # S. christatus automatically deleted 
+  # view() %>% 
+  glimpse()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
