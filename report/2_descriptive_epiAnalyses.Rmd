@@ -79,6 +79,10 @@ MLST, pneumoKITy and contamination profiles.
 
 vaccine-types and non-vaccine-types
 
+```{r}
+knitr::include_graphics("../pictures/genData_serotypes_vaccination_classification_combined.png")
+```
+
 ## 2. Modelling
 
 ### 2.1. Methods

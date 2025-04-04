@@ -562,10 +562,12 @@ cowplot::plot_grid(ser3, ser4,
 dev.off()
 
 # trial multicowplot
+png(file = "pictures/genData_serotypes_vaccination_classification_combined.png", width = 23, height = 25, unit = "cm", res = 600)
 cowplot::plot_grid(ser1, ser3,
                    ser2, ser4,
                    nrow = 2,
                    labels = c("A", "B", "C", "D"))
+dev.off()
 
 
 
