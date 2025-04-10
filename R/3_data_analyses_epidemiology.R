@@ -68,8 +68,8 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
                 area,
                 breastFeed_compiled,
                 contains("contact"),
-                healthcareVisit_last_3mo,
-                hospitalised_last_3mo,
+                -healthcareVisit_last_3mo,
+                -hospitalised_last_3mo,
                 contains("house"),
                 contains("illness"),
                 -illness_past3days_fever,
@@ -183,6 +183,9 @@ compile_all_report_with_pValues <- dplyr::left_join(
 
 write.csv(compile_all_report_with_pValues, "outputs/epi_all_descriptive_percentages_report_with_pValues.csv",
           row.names = F)
+
+# trial chisq lombok vs. sumbawa
+chisq.test(df_epi_chars$area, df_epi_chars$final_pneumo_decision)
 
 
 # try glm crude OR report
@@ -307,11 +310,17 @@ dev.off()
 # performance::check_model(or_multivariable_all$model2)
 # dev.off()
 
-png(file = "pictures/epiAnalyses_all_multivariable_final_model.png",
-    width = 23, height = 23, unit = "cm", res = 600)
 final_model_reconvert <- glm(formula(or_multivariable_all$final_model),
                              family = binomial, data = df_epi_chars)
+
+png(file = "pictures/epiAnalyses_all_multivariable_final_model.png",
+    width = 23, height = 23, unit = "cm", res = 600)
 performance::check_model(final_model_reconvert)
+dev.off()
+
+png(file = "pictures/epiAnalyses_all_multivariable_final_model_collinearity.png",
+    width = 23, height = 12, unit = "cm", res = 600)
+performance::check_model(final_model_reconvert, check = "vif")
 dev.off()
 
 # additional analysis for plusArea

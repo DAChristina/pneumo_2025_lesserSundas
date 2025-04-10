@@ -20,11 +20,9 @@ pacman::p_load(reactable, tidyverse, plotly)
 
 ### 1.1. Methods
 
-Pneumococcal carriage following PCV13 immunisation was assessed among children in two islands of Lesser Sunda Archipelago, Lombok and Sumbawa. We incorporated age group (\<1 year, 1-2 years, 3-5 years) along with other factors potentially influencing pneumococcal colonisation. *S. pneumoniae* species identification was determined using the combination of culture-based methods (physical characteristics and optochin assessment) and whole genome sequencing (WGS)-based approaches. I also test area as a potential confounder by implementing chi-square tests method from
+Pneumococcal carriage following PCV13 immunisation was assessed among children in two islands of Lesser Sunda Archipelago, Lombok and Sumbawa. We incorporated age group (\<1 year, 1-2 years, 3-5 years) along with other factors potentially influencing pneumococcal colonisation. *S. pneumoniae* species identification was determined using the combination of culture-based methods (physical characteristics and optochin assessment) and whole genome sequencing (WGS)-based approaches. I also test area as a potential confounder by implementing chi-square tests method against differences in other pneumococcal colonisation factors.
 
-To ensure accuracy on species identification, we evaluated the quality of genome assembly using **Bioconda::assembly-stats** (developed by Sanger Pathogens) and classified genomes into two categories: those with a genome length 1.9 Mb-2.3 Mb were considered pure pneumococcal genomes while those outside the ranges were classified as pneumococcal genomes with intra-species contamination. Further validation was performed using Torsten Seemann's **MLST** toolset, which conducts **BLAST** analysis on seven housekeeping genes. Multiple-serotype contamination was examined using Sheppard et al.'s **pneumoKITy**. Additionally, we uploaded the data to PathogenWatch (<http://pathogen.watch>) to obtain *in silico* identification of pneumococcus including their serotype determination, Global Pneumococcal Sequence Cluster (GPSC) classification, sequence type (ST), and antibiotic resistance profiling.
-
-The vaccine serotypes included in PCV13 (1, 3, 4, 5, 6A, 6B, 7F, 9V, 14, 18C, 19A, 19F, and 23F). *S. pneumoniae* were classified as non-typeable if a serotype could not be determined *in silico*.
+To ensure accuracy on species identification, we evaluated the quality of genome assembly using **Bioconda::assembly-stats** (developed by Sanger Pathogens) and classified genomes into two categories: those with a genome length 1.9 Mb-2.3 Mb were considered pure pneumococcal genomes while those outside the ranges were classified as pneumococcal genomes with intra-species contamination. Further validation was performed using Torsten Seemann's **MLST** toolset, which conducts **BLAST** analysis on seven housekeeping genes. Multiple-serotype co-colonisation was examined using Sheppard et al.'s **pneumoKITy**. Additionally, we uploaded the data to PathogenWatch (<http://pathogen.watch>) to obtain *in silico* identification of pneumococcus including their serotype determination, Global Pneumococcal Sequence Cluster (GPSC) classification, sequence type (ST), and antibiotic resistance profiling. The vaccine serotypes included in PCV13 (1, 3, 4, 5, 6A, 6B, 7F, 9V, 14, 18C, 19A, 19F, and 23F). *S. pneumoniae* were classified as non-typeable if a serotype could not be determined *in silico*.
 
 ### 1.2. Results
 
@@ -34,9 +32,17 @@ The vaccine serotypes included in PCV13 (1, 3, 4, 5, 6A, 6B, 7F, 9V, 14, 18C, 19
 
 A total number of 900 children were evenly assessed from Lombok (50%, n = 450) and Sumbawa (50%, n = 450), with equally represented males and females (48.78%, n = 439; 51.22%, n = 461, respectively). Overall, the study was dominated by children aged 3-5 years old (41.22%, n = 371), followed by children aged 1-2 years old (39.56% (39.56%, n = 356) and children below a year (19.22%, n = 173). 97.67% of the children (n = 879) were not consuming antibiotic in the past a month. Most of the children were currently breastfeed (50.44%, n = 454) or ever breastfeed (46.56%, n = 419), with only 3% of the children were never breastfed (n = 27).
 
+From 900 assessed children, only 31.67% (n = 285) of the children were passive smokers. Among the households, 3.56% (n = 32) used wood and 1% (n = 9) used kerosene as cooking fuel. In contrast, the vast majority (95.44%, n = 859) relied on LPG or natural gas. Most cooking activities (87.89%, n = 791) were conducted indoors, while only 12.11% (n = 109) of households cooked outdoors. Additionally, only 4.78% (n = 43) of the children attended daycare.
+
+Regarding housing conditions, 18.89% (n = 170) of homes had bamboo, wooden, or open windows, while 81.11% (n = 730) used glass or curtains. Reports of respiratory illness symptoms were also notable: 12.33% (n = 111) of children had a cough in the past 24 hours, 26.89% (n = 242) had at least one respiratory complaint (e.g., wheezing or difficulty breathing), and 24.44% (n = 220) experienced a runny nose. However, only 4.56% (n = 41) had a fever in the past three days.
+
+Most children (91.44%, n = 823) slept in households without children under five, while 8.56% (n = 77) lived with one to three children under five. The majority of households (60%, n = 540) consisted of 1–3 members, with 35.33% (n = 318) having 4–6 members and only 4.67% (n = 42) having more than 6 members.
+
+As for vaccination status, 51% (n = 459) of children had received 1–3 doses of the Hib-Pentavalent vaccine (mandatory schedule), and 49% (n = 441) had received 4 doses. For PCV13, 40.56% (n = 365) had 1–2 doses (mandatory), while 59.44% (n = 535) had received 3–4 doses.
+
 #### Pneumococcal carriage
 
-The pneumococcal carriage rate was slightly lower among males (42.82% (188/439)) compared to females (45.12% (208/461)). A slightly higher pneumococcal carriage was observed in Sumbawa (n = 204, 45.33%) compared to Lombok (n = 192, 42.67%). Among children assessed in Lombok, 3.78% (17/450) were under 1 year of age, with a pneumococcal carriage rate of 47.06% (8/17). In Sumbawa, 34.67% (156/450) of children were under 1 year, with a similar carriage rate of 44.87% (70/156).
+The pneumococcal carriage rate was slightly lower among males (42.82% (188/439)) compared to females (45.12% (208/461)). A slightly higher pneumococcal carriage was observed in Sumbawa (n = 204, 45.33%) compared to Lombok (n = 192, 42.67%), but no statistically significant difference occured among pneumococcal carriage between Lombok and Sumbawa (χ² = 0.55, p = 0.46). Among children assessed in Lombok, 3.78% (17/450) were under 1 year of age, with a pneumococcal carriage rate of 47.06% (8/17). In Sumbawa, 34.67% (156/450) of children were under 1 year, with a similar carriage rate of 44.87% (70/156).
 
 Children who received three doses of the Hib pentavalent vaccine accounted for 51% (n = 459) of the study population, with a carriage rate of 45.1% (n = 207). Those who received four doses made up 49% (n = 441), with a slightly lower positivity rate of 42.86% (n = 189). Children who received one to two mandatory doses of the PCV13 accounted for 40.56% (n = 365) of the study population, with a positivity rate of 41.37% (n = 151). Those who received three to four doses made up 59.44% (n = 535), with a slightly higher positivity rate of 45.79% (n = 245).
 
@@ -69,18 +75,13 @@ DT::datatable(report_epiTable, filter = "top",
 
 Pending
 
-Filter out the data:
+But soon I (maybe with workLab Team) will explain how they filter out the samples from the suspected pneumo carriages to re-cultivation, optochin assessment and WGS, including how many sample data failed to be processed due to RNA contaminations, etc.
 
-From positive samples, how many data failed to be processed due to RNA contaminations, etc.
-
-Subset the data to only WGS-processed samples:
-
-MLST, pneumoKITy and contamination profiles.
-
-vaccine-types and non-vaccine-types
+Subset the data to only WGS-processed samples:\
+Of the 396 positive carriage samples, 345 (160 from Lombok and 153 from Sumbawa) proceeded to WGS analysis. Pneumococcal carriage in children did not decrease with an increasing number of PCV13 vaccine doses—whether analysed as exact counts (0–4) or grouped into mandatory (1–2 doses) and booster (3–4 doses) categories. A similar trend was observed for vaccine-type pneumococci; however, there was an increase in the carriage of non-vaccine-type pneumococci and acapsular types following booster vaccination (42.81% and 7.99%, respectively).
 
 ```{r}
-knitr::include_graphics("../pictures/genData_serotypes_vaccination_classification_combined.png")
+knitr::include_graphics("../pictures/genData_serotypes_vaccination_classification_combined_by_age.png")
 ```
 
 ## 2. Modelling
@@ -93,20 +94,20 @@ To determine the factors associated with the prevalence of pneumococcal carriage
 
 ### 2.2.1. EpiData
 
-In a multivariate analysis, children with at least one respiratory illness in the past 24 hours had significantly higher odds of carrying pneumococcus (adjusted OR = 2.04, 95% CI = 1.39-3). The presence of other children in a household showed an association with pneumococcal carriage, although with no statistical significance: other children below 1 year old (adjusted OR = 1.8, 95% CI = 0.81-4.2, p = 0.16).
+The multivariable logistic regression model, refined using a stepwise backward elimination process, identified four key variables. Among these, only the presence of at least one respiratory illness in the past 24 hours was significantly associated with increased odds of pneumococcal carriage (adjusted OR = 2.04, 95% CI: 1.39–3.00). Although the presence of other children in the household appeared to be associated with pneumococcal carriage, the association was not statistically significant for children aged 1 to 2 years (adjusted OR = 1.80, 95% CI: 0.81–4.20, p = 0.16). We also tested the final model with area (Lombok and Sumbawa). The addition of area resulted in a minimal improvement in model fit, reducing the residual deviance from 1215.7 to 1214.9, but this change did not significantly improve the model (χ²(1) = 0.75, p = 0.387).
 
 ```{r}
 # same data but focused on only final model plus filtered variables
 report_model <- 
   read.csv("../outputs/epi_all_final_models.csv") %>% 
   dplyr::select(variable, value,
-                univar_crude_OR_report, univar_crude_p.value,
-                univar_plusArea_report, univar_plusArea_p.value,
+                # univar_crude_OR_report, univar_crude_p.value,
+                # univar_plusArea_report, univar_plusArea_p.value,
                 multivar_model1_report_OR, multivar_model1_p_value,
                 # multivar_model2_report_OR, multivar_model2_p_value,
                 multivar_final_report_OR, multivar_final_prz) %>% 
-  dplyr::mutate(univar_crude_p.value = round(univar_crude_p.value, 2),
-                univar_plusArea_p.value = round(univar_plusArea_p.value, 2),
+  dplyr::mutate(# univar_crude_p.value = round(univar_crude_p.value, 2),
+                # univar_plusArea_p.value = round(univar_plusArea_p.value, 2),
                 multivar_model1_p_value = round(multivar_model1_p_value, 2),
                 # multivar_model2_p_value = round(multivar_model2_p_value, 2),
                 multivar_final_prz = round(multivar_final_prz, 2))
@@ -123,17 +124,17 @@ DT::datatable(report_model, filter = "top",
 ```
 
 ```{r}
-# same data but focused on only final model plus filtered variables
+cat("Same data but focused on final model plus filtered variables only.")
 report_model_filtered <- 
   read.csv("../outputs/epi_all_final_models.csv") %>% 
   dplyr::select(variable, value,
-                univar_crude_OR_report, univar_crude_p.value,
-                univar_plusArea_report, univar_plusArea_p.value,
+                # univar_crude_OR_report, univar_crude_p.value,
+                # univar_plusArea_report, univar_plusArea_p.value,
                 multivar_model1_report_OR, multivar_model1_p_value,
                 # multivar_model2_report_OR, multivar_model2_p_value,
                 multivar_final_report_OR, multivar_final_prz) %>% 
-  dplyr::mutate(univar_crude_p.value = round(univar_crude_p.value, 2),
-                univar_plusArea_p.value = round(univar_plusArea_p.value, 2),
+  dplyr::mutate(# univar_crude_p.value = round(univar_crude_p.value, 2),
+                # univar_plusArea_p.value = round(univar_plusArea_p.value, 2),
                 multivar_model1_p_value = round(multivar_model1_p_value, 2),
                 # multivar_model2_p_value = round(multivar_model2_p_value, 2),
                 multivar_final_prz = round(multivar_final_prz, 2)) %>% 
@@ -157,8 +158,6 @@ Sort of goodness of fit
 ```{r}
 knitr::include_graphics("../pictures/epiAnalyses_all_multivariable_final_model.png")
 ```
-
-However, the analysis indicated that area was not a confounder
 
 ### 2.2.2. Genome data
 

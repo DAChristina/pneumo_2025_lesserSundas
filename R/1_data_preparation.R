@@ -580,6 +580,18 @@ df_gen_all <- dplyr::left_join(
       workWGS_MLST_pw_spi = workWGS_spi,
       workWGS_MLST_pw_xpt = workWGS_xpt,
       workWGS_MLST_pw_ddl = workWGS_ddl
+    ) %>% 
+    dplyr::mutate(
+      workWGS_serotype_regroup = case_when(
+        workWGS_serotype == "03" ~ "3",
+        workWGS_serotype == "06A" ~ "6A",
+        workWGS_serotype == "06B" ~ "6B",
+        workWGS_serotype == "06C" ~ "6C",
+        workWGS_serotype == "6E(6B)" ~ "serogroup 6",
+        workWGS_serotype == "07C" ~ "7C",
+        workWGS_serotype %in% c("alternative_aliB_NT", "untypable", "Untypable") ~ "untypeable",
+        TRUE ~ workWGS_serotype
+      )
     )
   ,
   join_by("workFasta_name" == "workWGS_dc_id")
@@ -642,7 +654,7 @@ df_gen_all <- dplyr::left_join(
       dplyr::mutate(
         workWGS_kity_predicted_serotype = gsub("_", "/", workWGS_kity_predicted_serotype),
         workWGS_kity_predicted_serotype_regroup = case_when(
-          grepl("Below",  workWGS_kity_predicted_serotype) ~ "acapsular",
+          grepl("Below",  workWGS_kity_predicted_serotype) ~ "untypeable",
           grepl("Mixed",  workWGS_kity_predicted_serotype) ~ "mixed serotypes/serogroups",
           workWGS_kity_predicted_serotype == "Serogroup/6/(6E)" ~ "serogroup 6 (6B/6E)",
           TRUE ~ workWGS_kity_predicted_serotype
@@ -651,7 +663,33 @@ df_gen_all <- dplyr::left_join(
     ,
     join_by("workFasta_name" == "workWGS_kity_sampleid")
   ) %>% 
+  dplyr::mutate(
+    serotype_final_decision = case_when(
+      is.na(workWGS_serotype_regroup) ~ workWGS_kity_predicted_serotype_regroup,
+      TRUE ~ workWGS_serotype_regroup
+      ),
+    serotype_final_decision_DC_notes = case_when(
+      workWGS_serotype_regroup == workWGS_kity_predicted_serotype_regroup | str_detect(workWGS_kity_predicted_serotype_regroup, fixed(workWGS_serotype_regroup)) ~ "trust pw",
+      workWGS_serotype_regroup != workWGS_kity_predicted_serotype_regroup | is.na(workWGS_serotype_regroup) ~ "pw cannot be trusted, use pneumoKITy's result"
+    ),
+    # solely check seerotype_final_decision
+    serotype_final_decision = case_when(
+      serotype_final_decision == "35A/35C/42" ~ "35C",
+      serotype_final_decision == "serogroup 24" ~ "24F",
+      serotype_final_decision == "10X" ~ "untypeable",
+      serotype_final_decision == "15B/15C" ~ "15C",
+      TRUE ~ serotype_final_decision
+    )
+  ) %>% 
   glimpse()
+
+# test serotype compile
+test_serotype_compile <- df_gen_all %>% 
+  dplyr::select(contains(c("serotype", "kity")),
+                -workWGS_serotype,
+                -workWGS_kity_predicted_serotype) %>% 
+  # dplyr::filter(serotype_final_decision_DC_notes != "trust pw") %>% 
+  view()
 
 write.csv(df_gen_all, "inputs/genData_all.csv", row.names = F)
 
@@ -671,18 +709,20 @@ df_gen_all_sp_comparison <- df_gen_all %>%
 # Isolate non-pneumo fasta files & pneumo fasta files
 fasta_non_pneumo <- df_gen_all %>% 
   dplyr::filter(workWGS_stats_pneumo_cutoff != "predicted pure pneumo") %>% 
-  dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
+  # dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
+  dplyr::mutate(fasta_name = paste0(workFasta_name_with_extension)) %>% 
   dplyr::select(fasta_name)
 
-write.table(fasta_non_pneumo, "inputs/list_fasta_non_pneumo.txt",
+write.table(fasta_non_pneumo, "inputs/list_fasta_non_pneumo_morethan23.txt",
             row.names = F, col.names = F, quote = F)
 
 fasta_predicted_pneumo <- df_gen_all %>% 
   dplyr::filter(workWGS_stats_pneumo_cutoff == "predicted pure pneumo") %>% 
-  dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
+  # dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
+  dplyr::mutate(fasta_name = paste0(workFasta_name_with_extension)) %>% 
   dplyr::select(fasta_name)
 
-write.table(fasta_predicted_pneumo, "inputs/list_fasta_predicted_pneumo.txt",
+write.table(fasta_predicted_pneumo, "inputs/list_fasta_predicted_pneumo_19to23.txt",
             row.names = F, col.names = F, quote = F)
 
 
@@ -787,11 +827,25 @@ df_gen_pneumo <- read.csv("inputs/genData_all.csv") %>%
   #               workWGS_kity_predicted_serotype,
   #               workWGS_kity_predicted_serotype_regroup
   # ) %>% 
-  dplyr::mutate(serotype_classification_PCV13 = case_when(
-    workWGS_kity_predicted_serotype_regroup %in% c("1", "3", "4", "5") ~ "VT",
-    str_detect(workWGS_kity_predicted_serotype_regroup, "6A|6B|7F|9V|14|18C|19A|19F|23F") ~ "VT",
-    workWGS_kity_predicted_serotype_regroup == "acapsular" ~ "acapsular",
-    TRUE ~ "NVT")) %>% 
+  dplyr::mutate(
+    serotype_classification_PCV13 = case_when(
+      workWGS_kity_predicted_serotype_regroup %in% c("1", "3", "4", "5", "7F") ~ "VT",
+      str_detect(workWGS_kity_predicted_serotype_regroup, "6A|6B|9V|14|18C|19A|19F|23F") ~ "VT",
+      workWGS_kity_predicted_serotype_regroup == "untypeable" ~ "untypeable",
+      TRUE ~ "NVT"),
+    serotype_classification_PCV13_pw = case_when(
+      workWGS_serotype %in% c("1", "3", "4", "5") ~ "VT",
+      str_detect(workWGS_serotype, "6A|6B|7F|9V|14|18C|19A|19F|23F") ~ "VT",
+      workWGS_serotype == "untypeable" ~ "untypeable",
+      TRUE ~ "NVT"),
+    serotype_classification_PCV13_final_decision = case_when(
+      serotype_final_decision %in% c("1", "3", "4", "5", "7F",
+                                     "6A", "6B", "9V", "14", "18C",
+                                     "19A", "19F", "23F") ~ "VT",
+      serotype_final_decision == "untypeable" ~ "untypeable",
+      TRUE ~ "NVT"
+    )
+  ) %>% 
   # view() %>%
   glimpse()
 
@@ -807,6 +861,17 @@ df_epi_gen_pneumo <- dplyr::right_join(
 write.csv(df_epi_gen_pneumo,
           "inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv",
           row.names = F)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
