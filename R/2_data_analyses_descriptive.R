@@ -606,7 +606,7 @@ ser5 <- ggplot(df_serotype_age_summary, aes(x = age_year_3groups,
             position = position_dodge(width = 0.9),
             vjust = -0.3) +
   scale_fill_manual(values = c(col_map)) +
-  labs(x = "PCV13", y = "Percentage", 
+  labs(x = "Age Groups", y = "Percentage", 
        # title = "All Serotypes"
   ) +
   theme_bw() +
@@ -649,7 +649,7 @@ ser6 <- ggplot(df_serotype_age_grouped, aes(x = serotype_final_decision,
   #           position = position_dodge(width = 0.9),
   #           vjust = -0.3) +
   scale_fill_manual(values = c(col_map)) +
-  labs(x = "Grouped PCV13", y = "Percentage", 
+  labs(x = "Age Groups", y = "Percentage", 
        # title = "All Serotypes"
   ) +
   theme_bw() +

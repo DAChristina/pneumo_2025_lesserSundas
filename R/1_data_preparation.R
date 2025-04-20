@@ -596,6 +596,13 @@ df_gen_all <- dplyr::left_join(
   ,
   join_by("workFasta_name" == "workWGS_dc_id")
   ) %>% 
+  # contigs
+  dplyr::left_join(
+    read.table("raw_data/test_fasta_contigs.txt", header = F) %>% 
+      stats::setNames("workFasta_name_with_extension")
+    ,
+    by = 
+  ) %>% 
   # generate specimen_id
   dplyr::mutate(specimen_id = gsub("Streptococcus_pneumoniae_", "", workFasta_name)) %>% 
   dplyr::left_join(
@@ -672,9 +679,10 @@ df_gen_all <- dplyr::left_join(
       workWGS_serotype_regroup == workWGS_kity_predicted_serotype_regroup | str_detect(workWGS_kity_predicted_serotype_regroup, fixed(workWGS_serotype_regroup)) ~ "trust pw",
       workWGS_serotype_regroup != workWGS_kity_predicted_serotype_regroup | is.na(workWGS_serotype_regroup) ~ "pw cannot be trusted, use pneumoKITy's result"
     ),
-    # solely check seerotype_final_decision
+    # solely check serotype_final_decision
     serotype_final_decision = case_when(
       serotype_final_decision == "35A/35C/42" ~ "35C",
+      serotype_final_decision == "serogroup 6" ~ "6B",
       serotype_final_decision == "serogroup 24" ~ "24F",
       serotype_final_decision == "10X" ~ "untypeable",
       serotype_final_decision == "15B/15C" ~ "15C",
@@ -823,10 +831,6 @@ df_gen_pneumo <- read.csv("inputs/genData_all.csv") %>%
   dplyr::filter(workWGS_stats_pneumo_cutoff == "predicted pure pneumo",
                 workWGS_MLST_dc_species != "-", # S. christatus
   ) %>% 
-  # dplyr::select(workWGS_serotype,
-  #               workWGS_kity_predicted_serotype,
-  #               workWGS_kity_predicted_serotype_regroup
-  # ) %>% 
   dplyr::mutate(
     serotype_classification_PCV13 = case_when(
       workWGS_kity_predicted_serotype_regroup %in% c("1", "3", "4", "5", "7F") ~ "VT",
@@ -834,8 +838,8 @@ df_gen_pneumo <- read.csv("inputs/genData_all.csv") %>%
       workWGS_kity_predicted_serotype_regroup == "untypeable" ~ "untypeable",
       TRUE ~ "NVT"),
     serotype_classification_PCV13_pw = case_when(
-      workWGS_serotype %in% c("1", "3", "4", "5") ~ "VT",
-      str_detect(workWGS_serotype, "6A|6B|7F|9V|14|18C|19A|19F|23F") ~ "VT",
+      workWGS_serotype %in% c("1", "3", "4", "5", "7F") ~ "VT",
+      str_detect(workWGS_serotype, "6A|6B|9V|14|18C|19A|19F|23F") ~ "VT",
       workWGS_serotype == "untypeable" ~ "untypeable",
       TRUE ~ "NVT"),
     serotype_classification_PCV13_final_decision = case_when(
@@ -862,7 +866,11 @@ write.csv(df_epi_gen_pneumo,
           "inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv",
           row.names = F)
 
-
+# test all pneumo data
+test_all_pneumo_data <- df_epi_gen_pneumo %>% 
+  dplyr::filter(!is.na(serotype_final_decision)) %>% 
+  dplyr::select(specimen_id, area, contains("serotype"), contains("species")) %>% 
+  glimpse()
 
 
 

@@ -1,0 +1,27 @@
+/* Make the slide take full width */
+.slide {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 30px !important;
+  box-sizing: border-box;
+}
+
+/* Remove black borders and center slides */
+body, .slides {
+  background: white !important;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Optional: Tweak font sizes for fullscreen look */
+.slide h1 {
+  font-size: 2.5em;
+}
+.slide h2 {
+  font-size: 2em;
+}
+.slide p, .slide li {
+  font-size: 1.1em;
+}
