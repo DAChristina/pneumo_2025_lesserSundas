@@ -4,30 +4,59 @@ library(ggtree)
 source("global/fun.R")
 
 df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv")
+tre_pp <- ape::read.tree("raw_data/result_poppunk/rapidnj_no_GPSC/rapidnj_no_GPSC_core_NJ.tree")
+tre_pp$tip.label <- gsub("^Streptococcus_pneumoniae_", "", tre_pp$tip.label)
+
+tre_raxml <- ape::read.tree("raw_data/result_raxml_from_panaroo/RAxML_bestTree.1_output_tree")
+tre_raxml$tip.label <- gsub("^Streptococcus_pneumoniae_", "", tre_raxml$tip.label)
+
+ggtree(tre_raxml) + geom_tiplab(size = 2)
+
+show_pp <- ggtree(tre_pp,
+                  layout = "fan",
+                  open.angle=30,
+                  size=0.75,
+                  aes(colour=Clade)) +
+  scale_colour_manual(
+    name="GPSC31 Clades",
+    values=c("gray75","steelblue","darkgreen","red"),
+    labels=c("","Clade 1", "Clade 2", "Clade 3"),
+    guide=guide_legend(keywidth=0.8,
+                       keyheight=0.8,
+                       order=1,
+                       override.aes=list(linetype=c("0"=NA,
+                                                    "Clade1"=1,
+                                                    "Clade2"=1,
+                                                    "Clade3"=1
+                       )
+                       )
+    )
+  ) + 
+  ggnewscale::new_scale_colour() %<+%
+  df_epi_gen_pneumo
 
 
-tre_BD <- read_rds("outputs/genomics/choosen_n703/method_strictgamma_1e6/mcmc_bacdating.rds") # BactDating output
-tree_pp <- system.file("extdata/BEAST",
-                       "raw_data/result_poppunk/rapidnj_no_GPSC/rapidnj_no_GPSC_core_NJ.tree",
-                       package="treeio")
+show_pp
 
-read_tree_pp <- treeio::read.beast(tree_pp)
-
-read_tree_pp <- ape::read.tree(tree_pp)
-read_tree_pp <- ape::read.tree("raw_data/result_poppunk/rapidnj_no_GPSC/rapidnj_no_GPSC_core_NJ.tree")
+show_pp + 
+  geom_tiplab(size = 2) + 
+  geom_tippoint(aes(color = workWGS_gpsc_strain), size = 2) + 
+  theme(legend.position = "right")
 
 
 
-tree_pp <- system.file("extdata/BEAST",
-                       "raw_data/result_poppunk/rapidnj_no_GPSC/rapidnj_no_GPSC_core_NJ.tree",
-                       package = "treeio")
-read_tree_pp <- ape::read.tree(tree_pp)
-read_tree_pp <- treeio::read.newick(tree_pp)
 
 
 
-tre_names <- as.data.frame(tre_BD$tree$tip.label)
-tre_names <- dplyr::left_join(tre_names, combined_data, by = c("tre_BD$tree$tip.label" = "tre.tip.label")) %>% 
+
+
+
+
+
+
+
+
+ btre_names <- dplyr::left_join(tre_names, combined_data, by = c("tre_BD$tree$tip.label" = "tre.tip.label")) %>% 
   # dplyr::filter(!is.na(clade)) %>% 
   dplyr::select(-ID) %>% 
   dplyr::rename(ID = 'tre_BD$tree$tip.label') %>% 
