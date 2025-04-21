@@ -562,10 +562,19 @@ write.csv(df_workLab, "inputs/workLab_data.csv", row.names = F)
 # I manually edit these inconsistencies
 
 df_gen_all <- dplyr::left_join(
-  read.csv("raw_data/test_fasta_headers.csv", header = F) %>% 
+  dplyr::bind_rows(
+    read.csv("raw_data/test_fasta_headers.csv", header = F)
+    ,
+    data.frame(
+      V1 = "Streptococcus_pneumoniae_LBK_137.fasta",
+      V2 = "contigs_available_but_not_fasta",
+      stringsAsFactors = FALSE
+    )
+  ) %>% 
     stats::setNames(c("workFasta_name_with_extension", "workFasta_genome_name")) %>% 
     dplyr::mutate(workFasta_name = gsub("\\.fasta$", "", workFasta_name_with_extension))
-  ,
+  ,  
+  # I manually edit 49 naming inconsistencies and analyse LBK_137 from contigs
   readxl::read_excel("raw_data/Data WGS_Lombok_ver4.xlsx") %>% 
     dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
     dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
@@ -598,10 +607,12 @@ df_gen_all <- dplyr::left_join(
   ) %>% 
   # contigs
   dplyr::left_join(
-    read.table("raw_data/test_fasta_contigs.txt", header = F) %>% 
-      stats::setNames("workFasta_name_with_extension")
+    read.table("raw_data/qfile_poppunk.txt", header = F) %>% 
+      stats::setNames(c("workFasta_name", "location")) %>% 
+      dplyr::mutate(contigs_availability = "contigs_available") %>% 
+      dplyr::select(-location)
     ,
-    by = 
+    by = "workFasta_name"
   ) %>% 
   # generate specimen_id
   dplyr::mutate(specimen_id = gsub("Streptococcus_pneumoniae_", "", workFasta_name)) %>% 
@@ -631,7 +642,7 @@ df_gen_all <- dplyr::left_join(
       dplyr::rename_all(~ paste0("workBLAST_lytA_", .)) %>% 
       dplyr::mutate(workFasta_name = gsub("_lytA_blastn_tabular.txt", "", workBLAST_lytA_file_name),
                     workBLAST_lytA_predicted_species = case_when(
-                      workBLAST_lytA_pident >= 98 ~ "predicted pure pneumo",
+                      workBLAST_lytA_pident >= 70 ~ "predicted pure pneumo",
                       TRUE ~ "not pneumococcus"
                     )) %>% 
       dplyr::select(-workBLAST_lytA_file_name, -workBLAST_lytA_qseqid, -workBLAST_lytA_sseqid)
@@ -693,7 +704,9 @@ df_gen_all <- dplyr::left_join(
 
 # test serotype compile
 test_serotype_compile <- df_gen_all %>% 
-  dplyr::select(contains(c("serotype", "kity")),
+  dplyr::select(specimen_id,
+                contigs_availability,
+                contains(c("serotype", "kity")),
                 -workWGS_serotype,
                 -workWGS_kity_predicted_serotype) %>% 
   # dplyr::filter(serotype_final_decision_DC_notes != "trust pw") %>% 
@@ -706,6 +719,7 @@ write.csv(df_gen_all, "inputs/genData_all.csv", row.names = F)
 df_gen_all_sp_comparison <- df_gen_all %>% 
   dplyr::select(workFasta_name_with_extension,
                 workFasta_file_check,
+                contigs_availability,
                 workWGS_success_failed,
                 workWGS_species_pw, workWGS_MLST_dc_species,
                 workWGS_stats_sum, workWGS_stats_ave, workWGS_stats_N50,
@@ -826,11 +840,24 @@ write.csv(final_epiData, "inputs/epiData_with_final_pneumo_decision.csv", row.na
 
 
 # generate final PCV13 serotype decision #######################################
-# subset only for pneumo species according to genome length & MLST --> BLAST result???
+# subset only for pneumo QC based on popPUNK output for 1.9Mb-2.3Mb
+
 df_gen_pneumo <- read.csv("inputs/genData_all.csv") %>% 
-  dplyr::filter(workWGS_stats_pneumo_cutoff == "predicted pure pneumo",
-                workWGS_MLST_dc_species != "-", # S. christatus
+  # omit bad quality genomes using popPUNK output
+  dplyr::left_join(
+    read.table("raw_data/result_poppunk/db_all/db_all_qcreport.txt",
+               sep = "\t", header = F) %>% 
+      stats::setNames(c("workFasta_name", "workPoppunk_qc"))
+    ,
+    by = "workFasta_name"
   ) %>% 
+  dplyr::mutate(
+    workPoppunk_qc = case_when(
+      is.na(workPoppunk_qc) ~ "pass_qc",
+      TRUE ~ workPoppunk_qc
+    )
+  ) %>% 
+  dplyr::filter(workPoppunk_qc == "pass_qc") %>% 
   dplyr::mutate(
     serotype_classification_PCV13 = case_when(
       workWGS_kity_predicted_serotype_regroup %in% c("1", "3", "4", "5", "7F") ~ "VT",
@@ -850,6 +877,7 @@ df_gen_pneumo <- read.csv("inputs/genData_all.csv") %>%
       TRUE ~ "NVT"
     )
   ) %>% 
+  dplyr::select(-contains("workWGS_stats")) %>% # I don't think assembly-stats is relevant to non-contigs fasta
   # view() %>%
   glimpse()
 
@@ -871,6 +899,35 @@ test_all_pneumo_data <- df_epi_gen_pneumo %>%
   dplyr::filter(!is.na(serotype_final_decision)) %>% 
   dplyr::select(specimen_id, area, contains("serotype"), contains("species")) %>% 
   glimpse()
+
+test_contigs <- df_epi_gen_pneumo %>% 
+  dplyr::full_join(
+    read.table("raw_data/qfile_filtered_19to23.txt", header = F) %>% 
+      stats::setNames(c("workFasta_name", "location")) %>% 
+      dplyr::mutate(contigs = "contigs_available") %>% 
+      dplyr::select(-location)
+    ,
+    by = "workFasta_name"
+  ) %>% 
+  dplyr::select(workFasta_name, area, contains("serotype"), contains("species"),
+                contigs) %>% 
+  # view() %>% 
+  glimpse()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
