@@ -1,4 +1,5 @@
 library(tidyverse)
+source("global/fun.R")
 
 # Data analyses process for epiData ############################################
 df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>% 
@@ -61,26 +62,6 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
                                    levels = c("negative", "positive"))
   ) %>% 
   glimpse()
-
-col_map <- c(
-  # final_pneumo_decision
-  "positive" = "steelblue",
-  "negative" = "indianred2",
-  # area
-  "lombok" = "orange",
-  "sumbawa" = "seagreen4",
-  # serotype groups
-  "VT" = "indianred3",
-  "NVT" = "skyblue2",
-  "untypeable" = "deepskyblue3",
-  # PCV13 groups
-  "1-2 mandatory" = "rosybrown4",
-  "3-4 booster" = "paleturquoise3",
-  # 3 age groups
-  "1 and below" = "indianred4",
-  "1-2" = "steelblue",
-  "3-5" = "gold2"
-)
 
 column_names <- setdiff(names(df_epi), "final_pneumo_decision")
 for (column in column_names){
@@ -430,17 +411,19 @@ df_serotype_summary <- df_epi_gen_pneumo %>%
 ser1 <- ggplot(df_serotype_summary, aes(x = serotype_final_decision, y = percentage,
                                 fill = serotype_classification_PCV13_final_decision)) +
   geom_bar(stat = "identity") +
-  geom_text(aes(label = paste0(round(percentage, 1), "%")), vjust = -0.5) +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), vjust = -0.5, size = 3) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   labs(x = " ", y = "Percentage", 
        # title = "All Serotypes"
        ) +
   scale_fill_manual(values = c(col_map)) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom",
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = c(0.02, 0.75),
+        legend.direction = "horizontal",
+        legend.justification = c("left", "top"),
+        legend.background = element_rect(fill = NA, color = NA),
         legend.title = element_blank(),
-        legend.justification = c(0.5, 0),
         legend.margin = margin(t = -50),
         legend.spacing.y = unit(-0.3, "cm"))
 
@@ -461,7 +444,7 @@ ser2 <- ggplot(df_serotype_area_summary, aes(x = serotype_final_decision,
                                      y = percentage,
                                      fill = area)) +
   geom_bar(stat = "identity", position = position_dodge()) +
-  # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
+  # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5, size = 3) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   facet_grid(~ serotype_classification_PCV13_final_decision,
              scales = "free_x",
@@ -472,18 +455,14 @@ ser2 <- ggplot(df_serotype_area_summary, aes(x = serotype_final_decision,
        # title = "All Serotypes"
        ) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom",
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = c(0.02, 0.75),
+        legend.direction = "vertical",
+        legend.justification = c("left", "top"),
+        legend.background = element_rect(fill = NA, color = NA),
         legend.title = element_blank(),
-        legend.justification = c(0.5, 0),
         legend.margin = margin(t = -50),
-        legend.spacing.y = unit(-0.3, "cm"),
-        # strip.placement = "outside",
-        strip.text.x = element_text(size = 12, face = "bold"),
-        strip.background = element_blank(),
-        # panel.spacing = unit(1, "lines"),
-        strip.position = "bottom"
-        ) # +
+        legend.spacing.y = unit(-0.3, "cm")) # +
   # facet_wrap(~ serotype_classification_PCV13_final_decision, nrow = 1, scales = "free_x")
 
 png(file = "pictures/genData_serotypes_classification.png", width = 23, height = 25, unit = "cm", res = 600)
@@ -505,7 +484,7 @@ ser3 <- ggplot(df_serotype_PCV13_summary, aes(x = vaccination_pcv13_dc_n,
                                              fill = serotype_classification_PCV13_final_decision)) +
   # geom_line(size = 1.5) +
   geom_bar(stat = "identity", position = position_dodge()) +
-  # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
+  # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5, size = 3) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   geom_text(aes(label = paste0(round(percentage, 2), "%")), 
             position = position_dodge(width = 0.9),
@@ -515,18 +494,14 @@ ser3 <- ggplot(df_serotype_PCV13_summary, aes(x = vaccination_pcv13_dc_n,
        # title = "All Serotypes"
   ) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 0, hjust = 0.5),
-        legend.position = "bottom",
+  theme(axis.text.x = element_text(angle = 0, hjust = 1, size = 10),
+        legend.position = c(0.02, 0.75),
+        legend.direction = "horizontal",
+        legend.justification = c("left", "top"),
+        legend.background = element_rect(fill = NA, color = NA),
         legend.title = element_blank(),
-        legend.justification = c(0.5, 0),
-        # legend.margin = margin(t = -50),
-        legend.spacing.y = unit(-0.3, "cm"),
-        # strip.placement = "outside",
-        strip.text.x = element_text(size = 12, face = "bold"),
-        strip.background = element_blank(),
-        # panel.spacing = unit(1, "lines"),
-        strip.position = "bottom"
-  )
+        legend.margin = margin(t = -50),
+        legend.spacing.y = unit(-0.3, "cm"))
 
 df_serotype_PCV13_grouped <- df_epi_gen_pneumo %>% 
   dplyr::group_by(vaccination_pcv13_dc_n_regroup, serotype_classification_PCV13_final_decision, serotype_final_decision) %>%
@@ -558,18 +533,14 @@ ser4 <- ggplot(df_serotype_PCV13_grouped, aes(x = serotype_final_decision,
        # title = "All Serotypes"
   ) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom",
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = c(0.02, 0.75),
+        legend.direction = "vertical",
+        legend.justification = c("left", "top"),
+        legend.background = element_rect(fill = NA, color = NA),
         legend.title = element_blank(),
-        legend.justification = c(0.5, 0),
         legend.margin = margin(t = -50),
-        legend.spacing.y = unit(-0.3, "cm"),
-        # strip.placement = "outside",
-        strip.text.x = element_text(size = 12, face = "bold"),
-        strip.background = element_blank(),
-        # panel.spacing = unit(1, "lines"),
-        strip.position = "bottom"
-  )
+        legend.spacing.y = unit(-0.3, "cm"))
 
 
 png(file = "pictures/genData_serotypes_vaccination_classification.png", width = 23, height = 25, unit = "cm", res = 600)
@@ -600,7 +571,7 @@ ser5 <- ggplot(df_serotype_age_summary, aes(x = age_year_3groups,
                                             fill = serotype_classification_PCV13_final_decision)) +
   # geom_line(size = 1.5) +
   geom_bar(stat = "identity", position = position_dodge()) +
-  # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
+  # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5, size = 3) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   geom_text(aes(label = paste0(round(percentage, 2), "%")), 
             position = position_dodge(width = 0.9),
@@ -610,18 +581,14 @@ ser5 <- ggplot(df_serotype_age_summary, aes(x = age_year_3groups,
        # title = "All Serotypes"
   ) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 0, hjust = 0.5),
-        legend.position = "bottom",
+  theme(axis.text.x = element_text(angle = 0, hjust = 1, size = 10),
+        legend.position = c(0.02, 0.75),
+        legend.direction = "horizontal",
+        legend.justification = c("left", "top"),
+        legend.background = element_rect(fill = NA, color = NA),
         legend.title = element_blank(),
-        legend.justification = c(0.5, 0),
-        # legend.margin = margin(t = -50),
-        legend.spacing.y = unit(-0.3, "cm"),
-        # strip.placement = "outside",
-        strip.text.x = element_text(size = 12, face = "bold"),
-        strip.background = element_blank(),
-        # panel.spacing = unit(1, "lines"),
-        strip.position = "bottom"
-  )
+        legend.margin = margin(t = -50),
+        legend.spacing.y = unit(-0.3, "cm"))
 
 df_serotype_age_grouped <- df_epi_gen_pneumo %>% 
   dplyr::group_by(age_year_3groups, serotype_classification_PCV13_final_decision, serotype_final_decision) %>%
@@ -653,18 +620,14 @@ ser6 <- ggplot(df_serotype_age_grouped, aes(x = serotype_final_decision,
        # title = "All Serotypes"
   ) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom",
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = c(0.02, 0.75),
+        legend.direction = "vertical",
+        legend.justification = c("left", "top"),
+        legend.background = element_rect(fill = NA, color = NA),
         legend.title = element_blank(),
-        legend.justification = c(0.5, 0),
         legend.margin = margin(t = -50),
-        legend.spacing.y = unit(-0.3, "cm"),
-        # strip.placement = "outside",
-        strip.text.x = element_text(size = 12, face = "bold"),
-        strip.background = element_blank(),
-        # panel.spacing = unit(1, "lines"),
-        strip.position = "bottom"
-  )
+        legend.spacing.y = unit(-0.3, "cm"))
 
 
 png(file = "pictures/genData_serotypes_vaccination_classification_by_age.png", width = 23, height = 25, unit = "cm", res = 600)

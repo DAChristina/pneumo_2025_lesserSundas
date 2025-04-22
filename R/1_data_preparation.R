@@ -588,7 +588,27 @@ df_gen_all <- dplyr::left_join(
       workWGS_MLST_pw_recp = workWGS_recp,
       workWGS_MLST_pw_spi = workWGS_spi,
       workWGS_MLST_pw_xpt = workWGS_xpt,
-      workWGS_MLST_pw_ddl = workWGS_ddl
+      workWGS_MLST_pw_ddl = workWGS_ddl,
+      
+      workWGS_AMR_pbp1a = workWGS_pbp1a,
+      workWGS_AMR_pbp2b = workWGS_pbp2b,
+      workWGS_AMR_pbp2x = workWGS_pbp2x,
+      workWGS_AMR_chloramphenicol = workWGS_chloramphenicol,
+      workWGS_AMR_clindamycin = workWGS_clindamycin,
+      workWGS_AMR_erythromycin = workWGS_erythromycin,
+      workWGS_AMR_fluoroquinolones = workWGS_fluoroquinolones,
+      workWGS_AMR_kanamycin = workWGS_kanamycin,
+      workWGS_AMR_linezolid = workWGS_linezolid,
+      workWGS_AMR_tetracycline = workWGS_tetracycline,
+      workWGS_AMR_trimethoprim = workWGS_trimethoprim,
+      workWGS_AMR_sulfamethoxazole = workWGS_sulfamethoxazole,
+      workWGS_AMR_cotrimoxazole = workWGS_cotrimoxazole,
+      workWGS_AMR_amoxicillin = workWGS_amoxicillin,
+      workWGS_AMR_ceftriaxone = workWGS_ceftriaxone,
+      workWGS_AMR_cefotaxime = workWGS_cefotaxime,
+      workWGS_AMR_cefuroxime = workWGS_cefuroxime,
+      workWGS_AMR_meropenem = workWGS_meropenem,
+      workWGS_AMR_penicillin = workWGS_penicillin
     ) %>% 
     dplyr::mutate(
       workWGS_serotype_regroup = case_when(
@@ -601,7 +621,26 @@ df_gen_all <- dplyr::left_join(
         workWGS_serotype %in% c("alternative_aliB_NT", "untypable", "Untypable") ~ "untypeable",
         TRUE ~ workWGS_serotype
       )
-    )
+    ) %>%
+    # annoying inconsistencies AMR values
+    dplyr::mutate(
+      across(
+        .cols = contains("_AMR_"),
+        # .fns = ~ str_replace_all(tolower(.x), " ", ""),
+        .fns = ~ str_replace_all(tolower(.x), "[_() ]", "")
+      )
+    ) #%>% 
+    # dplyr::mutate(
+    #   across(
+    #     .cols = contains("AMR"),
+    #     .fns = ~ case_when(
+    #       str_detect(tolower(.x), "sensitive") ~ "S",
+    #       str_detect(tolower(.x), "resistant") ~ "R",
+    #       str_detect(tolower(.x), "intermediate") ~ "I",
+    #       str_detect(tolower(.x), "nf") ~ "NF",
+    #       TRUE ~ as.character(.x)
+    #     ))
+    # )
   ,
   join_by("workFasta_name" == "workWGS_dc_id")
   ) %>% 
@@ -702,6 +741,9 @@ df_gen_all <- dplyr::left_join(
   ) %>% 
   glimpse()
 
+write.csv(df_gen_all, "inputs/genData_all.csv", row.names = F)
+
+
 # test serotype compile
 test_serotype_compile <- df_gen_all %>% 
   dplyr::select(specimen_id,
@@ -712,7 +754,16 @@ test_serotype_compile <- df_gen_all %>%
   # dplyr::filter(serotype_final_decision_DC_notes != "trust pw") %>% 
   view()
 
-write.csv(df_gen_all, "inputs/genData_all.csv", row.names = F)
+# test cleaned AMR
+amr <- df_gen_all %>% 
+  dplyr::select(contains("_AMR_")) %>% 
+  glimpse()
+
+for (col in colnames(amr)) {
+  cat("\nTabs: ", col, "\n")
+  # print(table(amr[[col]], useNA = "always"))
+  print(unique(amr[[col]]))
+}
 
 # Species decision based on workWGS_stats_pneumo_cutoff = "predicted pure pneumo";
 # NOT pneumo species from pathogenWatch OR MLST!

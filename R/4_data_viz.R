@@ -1,5 +1,4 @@
 library(tidyverse)
-library(tidytree)
 library(ggtree)
 source("global/fun.R")
 
@@ -24,7 +23,12 @@ df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pne
                                                    "23B1", "24F", "25B", "28A", "31", "33B",
                                                    "34", "35A", "35B", "35C", "35F", "37",
                                                    "37F", "38", "39",
-                                                   "untypeable")))
+                                                   "untypeable")
+                                                 ),
+                # annoying factor setup
+                n_child_1to2yo = factor(n_child_1to2yo,
+                                        levels = c("0", "1", "2"))
+                )
 tre_pp <- ape::read.tree("raw_data/result_poppunk/rapidnj_no_GPSC/rapidnj_no_GPSC_core_NJ.tree")
 tre_pp$tip.label <- gsub("^Streptococcus_pneumoniae_", "", tre_pp$tip.label)
 tre_raxml <- ape::read.tree("raw_data/result_raxml_from_panaroo/RAxML_bestTree.1_output_tree")
@@ -170,7 +174,8 @@ tree_epi_raxml <- show_raxml %<+%
     breaks = c("VT", "NVT", "untypeable"),
     labels = c("VT", "NVT", "untypeable"),
     guide=guide_legend(keywidth=0.3, keyheight=0.3,
-                       ncol=3, order=3)
+                       ncol=3,
+                       order=1)
   ) +
   theme(
     legend.title=element_text(size=12), 
@@ -189,7 +194,8 @@ tree_epi_raxml <- show_raxml %<+%
     name="Age groups",
     values=c(col_map),
     labels=c("<1", "1-2", "3-5"),
-    guide=guide_legend(keywidth=0.3, keyheight=0.3, ncol=3, order=3)
+    guide=guide_legend(keywidth=0.3, keyheight=0.3, ncol=3,
+                       order=2)
   ) +
   theme(
     legend.title=element_text(size=12), 
@@ -208,7 +214,8 @@ tree_epi_raxml <- show_raxml %<+%
     name="Area",
     values=c(col_map),
     labels=c("Lombok", "Sumbawa"),
-    guide=guide_legend(keywidth=0.3, keyheight=0.3, ncol=3, order=3)
+    guide=guide_legend(keywidth=0.3, keyheight=0.3, ncol=3,
+                       order=3)
   ) +
   theme(
     legend.title=element_text(size=12), 
@@ -223,12 +230,14 @@ tree_epi_raxml <- show_raxml %<+%
     width=0.02,
     offset=0.1
   ) +
-  scale_fill_viridis_d(
-    name = "Illness in the past 24h",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3)
+  scale_fill_manual(
+    name="Respiratory illness",
+    values=c(col_map),
+    breaks = c("≥ 1 respiratory illness", "no"),
+    labels = c("≥ 1 respiratory illness", "no"),
+    guide=guide_legend(keywidth=0.3, keyheight=0.3,
+                       ncol=3,
+                       order=4)
   ) +
   theme(
     legend.title=element_text(size=12), 
@@ -243,12 +252,14 @@ tree_epi_raxml <- show_raxml %<+%
     width=0.02,
     offset=0.1
   ) +
-  scale_fill_viridis_d(
-    name = "Illness: cough in the past 24h",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3)
+  scale_fill_manual(
+    name="Respiratory illness: cough",
+    values=c(col_map),
+    breaks = c("yes", "no"),
+    labels = c("yes", "no"),
+    guide=guide_legend(keywidth=0.3, keyheight=0.3,
+                       ncol=3,
+                       order=5)
   ) +
   theme(
     legend.title=element_text(size=12), 
@@ -263,12 +274,12 @@ tree_epi_raxml <- show_raxml %<+%
     width=0.02,
     offset=0.1
   ) +
-  scale_fill_viridis_b(
-    name = "Total children 1-2 years old",
-    option = "C",
-    direction = -1,
+  scale_fill_brewer(
+    name = "Total children aged 1-2 years old",
+    palette = "Set2",
     guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3)
+                         ncol = 3,
+                         order=6)
   ) +
   theme(
     legend.title=element_text(size=12), 
@@ -283,12 +294,14 @@ tree_epi_raxml <- show_raxml %<+%
     width=0.02,
     offset=0.1
   ) +
-  scale_fill_viridis_d(
-    name = "Contact with other children",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3)
+  scale_fill_manual(
+    name="Peer contact",
+    values=c(col_map),
+    breaks = c("yes", "no"),
+    labels = c("yes", "no"),
+    guide=guide_legend(keywidth=0.3, keyheight=0.3,
+                       ncol=3,
+                       order=7)
   ) +
   theme(
     legend.title=element_text(size=12), 
@@ -303,12 +316,14 @@ tree_epi_raxml <- show_raxml %<+%
     width=0.02,
     offset=0.1
   ) +
-  scale_fill_viridis_d(
-    name = "Cigarettes exposure",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3)
+  scale_fill_manual(
+    name="Cigarettes exposure",
+    values=c(col_map),
+    breaks = c("yes", "no"),
+    labels = c("yes", "no"),
+    guide=guide_legend(keywidth=0.3, keyheight=0.3,
+                       ncol=3,
+                       order=8)
   ) +
   theme(
     legend.title=element_text(size=12), 
@@ -319,7 +334,50 @@ tree_epi_raxml
 
 
 # AMR tree #####################################################################
-
+tree_amr_raxml <- show_raxml %<+%
+  df_epi_gen_pneumo +
+  # vaccine classification
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$serotype_classification_PCV13_final_decision),
+    width=0.02,
+    offset=0.05
+  ) +
+  scale_fill_manual(
+    name="PCV13 serotype coverage",
+    values=c(col_map),
+    breaks = c("VT", "NVT", "untypeable"),
+    labels = c("VT", "NVT", "untypeable"),
+    guide=guide_legend(keywidth=0.3, keyheight=0.3,
+                       ncol=3,
+                       order=1)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # age groups
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$age_year_3groups),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_manual(
+    name="Age groups",
+    values=c(col_map),
+    labels=c("<1", "1-2", "3-5"),
+    guide=guide_legend(keywidth=0.3, keyheight=0.3, ncol=3,
+                       order=2)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  )
+tree_amr_raxml
 
 
 
