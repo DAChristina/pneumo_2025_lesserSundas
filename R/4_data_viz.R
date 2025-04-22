@@ -3,95 +3,326 @@ library(tidytree)
 library(ggtree)
 source("global/fun.R")
 
-df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv")
+df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv") %>% 
+  dplyr::rename(label = specimen_id) %>% # annoying ggtree label annotation
+  dplyr::mutate(serotype_final_decision = factor(serotype_final_decision,
+                                                 levels = c(
+                                                   # VT
+                                                   # "3", "6A/6B", "6A/6B/6C/6D", "serogroup 6",
+                                                   # "14", "17F", "18C/18B", "19A", "19F", "23F",
+                                                   "1", "3", "4", "5", "7F",
+                                                   "6A", "6B", "9V", "14", "18C",
+                                                   "19A", "19F", "23F",
+                                                   # NVT
+                                                   # "7C", "10A", "10B", "11A/11D", "13", "15A", "15B/15C",
+                                                   # "16F", "19B", "20", "23A", "23B", "24F/24B", "25F/25A/38",
+                                                   # "28F/28A", "31", "34", "35A/35C/42", "35B/35D", "35F",
+                                                   # "37", "39", "mixed serogroups",
+                                                   "serogroup 6", "6C", "7C", "10A", "10B",
+                                                   "11A", "13", "15A", "15B", "15C", "16F",
+                                                   "17F", "18B", "19B", "20", "23A", "23B",
+                                                   "23B1", "24F", "25B", "28A", "31", "33B",
+                                                   "34", "35A", "35B", "35C", "35F", "37",
+                                                   "37F", "38", "39",
+                                                   "untypeable")))
 tre_pp <- ape::read.tree("raw_data/result_poppunk/rapidnj_no_GPSC/rapidnj_no_GPSC_core_NJ.tree")
 tre_pp$tip.label <- gsub("^Streptococcus_pneumoniae_", "", tre_pp$tip.label)
-
 tre_raxml <- ape::read.tree("raw_data/result_raxml_from_panaroo/RAxML_bestTree.1_output_tree")
 tre_raxml$tip.label <- gsub("^Streptococcus_pneumoniae_", "", tre_raxml$tip.label)
 
-ggtree(tre_raxml) + geom_tiplab(size = 2)
+# test node
+ggtree(tre_raxml) + 
+  geom_tiplab(size = 2) +
+  geom_label2(aes(subset=!isTip, label=node), size=2, color="darkred", alpha=0.5)
 
+# basic
 show_pp <- ggtree(tre_pp,
                   layout = "fan",
                   open.angle=30,
                   size=0.75,
-                  aes(colour=Clade)) +
-  scale_colour_manual(
-    name="GPSC31 Clades",
-    values=c("gray75","steelblue","darkgreen","red"),
-    labels=c("","Clade 1", "Clade 2", "Clade 3"),
-    guide=guide_legend(keywidth=0.8,
-                       keyheight=0.8,
-                       order=1,
-                       override.aes=list(linetype=c("0"=NA,
-                                                    "Clade1"=1,
-                                                    "Clade2"=1,
-                                                    "Clade3"=1
-                       )
-                       )
-    )
-  ) + 
-  ggnewscale::new_scale_colour() %<+%
-  df_epi_gen_pneumo
-
-
+                  # aes(colour=Clade)
+                  ) %<+% 
+  df_epi_gen_pneumo +
+  # geom_tiplab(size = 2) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  geom_hilight(node=367, fill="pink", alpha=0.5)
 show_pp
 
-show_pp + 
-  geom_tiplab(size = 2) + 
-  geom_tippoint(aes(color = workWGS_gpsc_strain), size = 2) + 
-  theme(legend.position = "right")
+show_raxml <- ggtree(tre_raxml,
+                  layout = "fan",
+                  open.angle=30,
+                  size=0.75,
+                  # aes(colour=Clade)
+) %<+% 
+  df_epi_gen_pneumo +
+  # geom_tiplab(size = 2) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  geom_hilight(node=367, fill="pink", alpha=0.5)
+show_raxml
 
-
-
-
-
-
-
-
-
-
-
-
-
-
- btre_names <- dplyr::left_join(tre_names, combined_data, by = c("tre_BD$tree$tip.label" = "tre.tip.label")) %>% 
-  # dplyr::filter(!is.na(clade)) %>% 
-  dplyr::select(-ID) %>% 
-  dplyr::rename(ID = 'tre_BD$tree$tip.label') %>% 
-  dplyr::mutate(current.region.name = ifelse(is.na(current.region.name), "Unknown", current.region.name),
-                ageGroup7 = ifelse(is.na(ageGroup7), "Unknown", ageGroup7),
-                ageGroup2 = ifelse(is.na(ageGroup2), "Unknown", ageGroup2))
-
-ggtree_ageGroup7 <- ggtree(tre_BD$tree,
-                           mrsd = 2014-07-11) %<+%
-  tre_names +
-  geom_tippoint(aes(color=ageGroup7))
-ggtree_ageGroup7
-
-
-ggtree_ageGroup2 <- ggtree_ageGroup7 %<+%
-  tre_names +
-  ggnewscale::new_scale_fill() +
+# gen tree #####################################################################
+tree_gen_raxml <- show_raxml %<+%
+  df_epi_gen_pneumo +
+  # vaccine classification
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
-    mapping=aes(fill=tre_names$ageGroup2),
-    width=15,
+    mapping=aes(fill=df_epi_gen_pneumo$serotype_classification_PCV13_final_decision),
+    width=0.02,
     offset=0.05
   ) +
   scale_fill_manual(
-    name="Demographic Groups (2)",
+    name="PCV13 serotype coverage",
     values=c(col_map),
-    breaks = c("children", "adults", "Unknown"),
-    labels = c("Children (< 15)", "Adults", "Unknown"),
-    guide=guide_legend(keywidth=0.3, keyheight=0.3, ncol=2, order=3)
+    breaks = c("VT", "NVT", "untypeable"),
+    labels = c("VT", "NVT", "untypeable"),
+    guide=guide_legend(keywidth=0.3, keyheight=0.3,
+                       ncol=3, order=3)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # serotype
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$serotype_final_decision),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_viridis_d(
+    name = "Serotype",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 3)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # GPSC
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$workWGS_gpsc_strain),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_viridis_d(
+    name = "GPSC",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 3)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) # +
+  # MLST too diverse ST
+  # ggnewscale::new_scale_fill() +
+  # ggtreeExtra::geom_fruit(
+  #   geom=geom_tile,
+  #   mapping=aes(fill=df_epi_gen_pneumo$workWGS_MLST_dc_ST),
+  #   width=0.02,
+  #   offset=0.1
+  # ) +
+  # scale_fill_viridis_d(
+  #   name = "MLST",
+  #   # option = "C",
+  #   direction = -1,
+  #   guide = guide_legend(keywidth = 0.3, keyheight = 0.3, ncol = 2)
+  # ) +
+  # theme(
+  #   legend.title=element_text(size=12), 
+  #   legend.text=element_text(size=9),
+  #   legend.spacing.y = unit(0.02, "cm")
+  # )
+tree_gen_raxml
+
+
+
+# epi tree #####################################################################
+tree_epi_raxml <- show_raxml %<+%
+  df_epi_gen_pneumo +
+  # vaccine classification
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$serotype_classification_PCV13_final_decision),
+    width=0.02,
+    offset=0.05
+  ) +
+  scale_fill_manual(
+    name="PCV13 serotype coverage",
+    values=c(col_map),
+    breaks = c("VT", "NVT", "untypeable"),
+    labels = c("VT", "NVT", "untypeable"),
+    guide=guide_legend(keywidth=0.3, keyheight=0.3,
+                       ncol=3, order=3)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # age groups
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$age_year_3groups),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_manual(
+    name="Age groups",
+    values=c(col_map),
+    labels=c("<1", "1-2", "3-5"),
+    guide=guide_legend(keywidth=0.3, keyheight=0.3, ncol=3, order=3)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # area
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$area),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_manual(
+    name="Area",
+    values=c(col_map),
+    labels=c("Lombok", "Sumbawa"),
+    guide=guide_legend(keywidth=0.3, keyheight=0.3, ncol=3, order=3)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # illness
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$illness_past24h_difficulty_compiled),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_viridis_d(
+    name = "Illness in the past 24h",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 3)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # illness: cough
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$illness_past24h_cough),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_viridis_d(
+    name = "Illness: cough in the past 24h",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 3)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # total children 1-2 years old
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$n_child_1to2yo),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_viridis_b(
+    name = "Total children 1-2 years old",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 3)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # contact other children
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$contact_otherChildren),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_viridis_d(
+    name = "Contact with other children",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 3)
+  ) +
+  theme(
+    legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # contact smoking
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$contact_cigarettes),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_viridis_d(
+    name = "Cigarettes exposure",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 3)
   ) +
   theme(
     legend.title=element_text(size=12), 
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   )
-ggtree_ageGroup2
+tree_epi_raxml
+
+
+# AMR tree #####################################################################
+
+
+
+
+
 
 
