@@ -626,21 +626,58 @@ df_gen_all <- dplyr::left_join(
     dplyr::mutate(
       across(
         .cols = contains("_AMR_"),
-        # .fns = ~ str_replace_all(tolower(.x), " ", ""),
-        .fns = ~ str_replace_all(tolower(.x), "[_() ]", "")
+        .fns = ~ .x %>%
+          tolower() %>%
+          str_replace_all("[_()\\t;\\- ]", "") %>%
+          str_trim()
       )
-    ) #%>% 
-    # dplyr::mutate(
-    #   across(
-    #     .cols = contains("AMR"),
-    #     .fns = ~ case_when(
-    #       str_detect(tolower(.x), "sensitive") ~ "S",
-    #       str_detect(tolower(.x), "resistant") ~ "R",
-    #       str_detect(tolower(.x), "intermediate") ~ "I",
-    #       str_detect(tolower(.x), "nf") ~ "NF",
-    #       TRUE ~ as.character(.x)
-    #     ))
-    # )
+    ) %>% 
+    dplyr::mutate(across(
+      .cols = contains("AMR"),
+      .fns = ~ case_when(
+        str_detect(.x, "catpc194") ~ "R (cat_pC194)",
+        str_detect(.x, "ermb") ~ "R (ermB)",
+        str_detect(.x, "inua") ~ "R (inuA)",
+        str_detect(.x, "mefa10") ~ "R (mefA_10)",
+        
+        str_detect(.x, "parcd83n") ~ "R (parC_D83N)",
+        str_detect(.x, "parcs79f") ~ "R (parC_S79F)",
+        str_detect(.x, "parcs79y") ~ "R (parC_S79Y)",
+        
+        str_detect(.x, "tetk") ~ "R (tetK)",
+        str_detect(.x, "tetm1") ~ "R (tetM_1)",
+        str_detect(.x, "tetm12") ~ "R (tetM_12)",
+        str_detect(.x, "tetm13") ~ "R (tetM_13)",
+        str_detect(.x, "tetm2") ~ "R (tetM_2)",
+        str_detect(.x, "tetm4") ~ "R (tetM_4)",
+        str_detect(.x, "tetm8") ~ "R (tetM_8)",
+        
+        str_detect(.x, "folai100|folai100l") ~ "R (folA_I100L)",
+        str_detect(.x, "folpaainsert5770") ~ "R (folP_57-70)",
+        str_detect(.x, "folpaainsert5771") ~ "R (folP_57-71)",
+        TRUE ~ .x
+        ))
+      ) %>% 
+    dplyr::mutate(across(
+      .cols = contains("_AMR_"),
+      .fns = ~ case_when(
+        # relabel
+        str_to_lower(.x) == "sensitive" ~ "S",
+        str_to_lower(.x) == "resistant" ~ "R",
+        str_to_lower(.x) == "intermediate" ~ "I",
+        str_to_lower(.x) %in% c("none", "nf", "nfnf", "-", "", "null", "null/null", "nf/nf", "nfnull/null") ~ "NF",
+        
+        # compound mappings
+        str_to_lower(.x) == "sensitive/intermediate" ~ "S/I",
+        str_to_lower(.x) == "sensitive/resistant" ~ "S/R",
+        str_to_lower(.x) == "intermediate/resistant" ~ "I/R",
+        str_to_lower(.x) == "sensitive/sensitive" ~ "S/S",
+        
+        # prefix mutation
+        # str_detect(.x, "\\(") & !str_detect(.x, "^R \\(") ~ paste0("R ", .x),
+        TRUE ~ .x
+      ))
+    )
   ,
   join_by("workFasta_name" == "workWGS_dc_id")
   ) %>% 
@@ -762,7 +799,7 @@ amr <- df_gen_all %>%
 for (col in colnames(amr)) {
   cat("\nTabs: ", col, "\n")
   # print(table(amr[[col]], useNA = "always"))
-  print(unique(amr[[col]]))
+  print(sort(unique(amr[[col]])))
 }
 
 # Species decision based on workWGS_stats_pneumo_cutoff = "predicted pure pneumo";
