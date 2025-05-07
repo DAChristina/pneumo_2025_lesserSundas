@@ -903,7 +903,7 @@ df_final_pneumo_group <- df_final_pneumo %>%
   dplyr::group_by(workLab_culture_suspect, workLab_optochin,
                   workLab_culture_result,
                   workLab_culture_result_final, workLab_culture_notes,
-                  workBLAST_lytA_predicted_species,
+                  # workBLAST_lytA_predicted_species,
                   workWGS_MLST_dc_species, workWGS_species_pw,
                   final_pneumo_decision
                   ) %>% 
