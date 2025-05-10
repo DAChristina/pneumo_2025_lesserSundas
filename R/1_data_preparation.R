@@ -677,6 +677,60 @@ df_gen_all <- dplyr::left_join(
         # str_detect(.x, "\\(") & !str_detect(.x, "^R \\(") ~ paste0("R ", .x),
         TRUE ~ .x
       ))
+    ) %>% 
+    # grouping
+    dplyr::mutate(
+      workWGS_AMR_ceftriaxone_nonMeningitis = case_when(
+        is.na(workWGS_AMR_ceftriaxone) ~ NA_character_,
+        workWGS_AMR_ceftriaxone == "NF" ~ "NF",
+        TRUE ~ sub("/.*", "", workWGS_AMR_ceftriaxone)
+      ),
+      workWGS_AMR_ceftriaxone_meningitis = case_when(
+        is.na(workWGS_AMR_ceftriaxone) ~ NA_character_,
+        workWGS_AMR_ceftriaxone == "NF" ~ "NF",
+        TRUE ~ sub(".*/", "", workWGS_AMR_ceftriaxone)
+      ),
+      
+      workWGS_AMR_cefotaxime_nonMeningitis = case_when(
+        is.na(workWGS_AMR_cefotaxime) ~ NA_character_,
+        workWGS_AMR_cefotaxime == "NF" ~ "NF",
+        TRUE ~ sub("/.*", "", workWGS_AMR_cefotaxime)
+      ),
+      workWGS_AMR_cefotaxime_meningitis = case_when(
+        is.na(workWGS_AMR_cefotaxime) ~ NA_character_,
+        workWGS_AMR_cefotaxime == "NF" ~ "NF",
+        TRUE ~ sub(".*/", "", workWGS_AMR_cefotaxime)
+      ),
+      
+      workWGS_AMR_penicillin_nonMeningitis = case_when(
+        is.na(workWGS_AMR_penicillin) ~ NA_character_,
+        workWGS_AMR_penicillin == "NF" ~ "NF",
+        TRUE ~ sub("/.*", "", workWGS_AMR_penicillin)
+      ),
+      workWGS_AMR_penicillin_meningitis = case_when(
+        is.na(workWGS_AMR_penicillin) ~ NA_character_,
+        workWGS_AMR_penicillin == "NF" ~ "NF",
+        TRUE ~ sub(".*/", "", workWGS_AMR_penicillin)
+      ),
+      
+      workWGS_AMR_class_cephalosporins = case_when(
+        workWGS_AMR_ceftriaxone_nonMeningitis == "R" | workWGS_AMR_cefotaxime_nonMeningitis == "R" | workWGS_AMR_cefuroxime == "R" ~ "R",
+        workWGS_AMR_ceftriaxone_nonMeningitis == "I" | workWGS_AMR_cefotaxime_nonMeningitis == "I" | workWGS_AMR_cefuroxime == "I" ~ "I",
+        workWGS_AMR_ceftriaxone_nonMeningitis == "S" | workWGS_AMR_cefotaxime_nonMeningitis == "S" | workWGS_AMR_cefuroxime == "S" ~ "S",
+        TRUE ~ "NF"
+      ),
+      workWGS_AMR_class_penicillins = case_when(
+        workWGS_AMR_penicillin_nonMeningitis == "R" | workWGS_AMR_amoxicillin == "R" ~ "R",
+        workWGS_AMR_penicillin_nonMeningitis == "I" | workWGS_AMR_amoxicillin == "I" ~ "I",
+        workWGS_AMR_penicillin_nonMeningitis == "S" | workWGS_AMR_amoxicillin == "S" ~ "S",
+        TRUE ~ "NF"
+      ),
+      workWGS_AMR_class_antifolates = case_when(
+        workWGS_AMR_trimethoprim == "R (folA_I100L)" & workWGS_AMR_sulfamethoxazole == "R (folP_57-70)" ~ "R (folA_I100L & folP_57-70)",
+        workWGS_AMR_trimethoprim == "NF" & workWGS_AMR_sulfamethoxazole == "R (folP_57-70)" ~ "R (folP_57-70)",
+        workWGS_AMR_trimethoprim == "R (folA_I100L)" & workWGS_AMR_sulfamethoxazole == "NF" ~ "R (folA_I100L)",
+        TRUE ~ "NF"
+      )
     )
   ,
   join_by("workFasta_name" == "workWGS_dc_id")
@@ -816,24 +870,24 @@ df_gen_all_sp_comparison <- df_gen_all %>%
   view()
 
 
-# Isolate non-pneumo fasta files & pneumo fasta files
-fasta_non_pneumo <- df_gen_all %>% 
-  dplyr::filter(workWGS_stats_pneumo_cutoff != "predicted pure pneumo") %>% 
-  # dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
-  dplyr::mutate(fasta_name = paste0(workFasta_name_with_extension)) %>% 
-  dplyr::select(fasta_name)
-
-write.table(fasta_non_pneumo, "inputs/list_fasta_non_pneumo_morethan23.txt",
-            row.names = F, col.names = F, quote = F)
-
-fasta_predicted_pneumo <- df_gen_all %>% 
-  dplyr::filter(workWGS_stats_pneumo_cutoff == "predicted pure pneumo") %>% 
-  # dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
-  dplyr::mutate(fasta_name = paste0(workFasta_name_with_extension)) %>% 
-  dplyr::select(fasta_name)
-
-write.table(fasta_predicted_pneumo, "inputs/list_fasta_predicted_pneumo_19to23.txt",
-            row.names = F, col.names = F, quote = F)
+# # Isolate non-pneumo fasta files & pneumo fasta files
+# fasta_non_pneumo <- df_gen_all %>% 
+#   dplyr::filter(workWGS_stats_pneumo_cutoff != "predicted pure pneumo") %>% 
+#   # dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
+#   dplyr::mutate(fasta_name = paste0(workFasta_name_with_extension)) %>% 
+#   dplyr::select(fasta_name)
+# 
+# write.table(fasta_non_pneumo, "inputs/list_fasta_non_pneumo_morethan23.txt",
+#             row.names = F, col.names = F, quote = F)
+# 
+# fasta_predicted_pneumo <- df_gen_all %>% 
+#   dplyr::filter(workWGS_stats_pneumo_cutoff == "predicted pure pneumo") %>% 
+#   # dplyr::mutate(fasta_name = paste0("/home/ron/pneumo_2025_lesserSundas/raw_data/fasta_compiled_all/", workFasta_name_with_extension)) %>% 
+#   dplyr::mutate(fasta_name = paste0(workFasta_name_with_extension)) %>% 
+#   dplyr::select(fasta_name)
+# 
+# write.table(fasta_predicted_pneumo, "inputs/list_fasta_predicted_pneumo_19to23.txt",
+#             row.names = F, col.names = F, quote = F)
 
 
 # Test duplicated ID
@@ -932,7 +986,7 @@ write.csv(final_epiData, "inputs/epiData_with_final_pneumo_decision.csv", row.na
 
 df_gen_pneumo <- read.csv("inputs/genData_all.csv") %>% 
   # omit bad quality genomes using popPUNK output
-  dplyr::left_join(
+  dplyr::full_join(
     read.table("raw_data/result_poppunk/db_all/db_all_qcreport.txt",
                sep = "\t", header = F) %>% 
       stats::setNames(c("workFasta_name", "workPoppunk_qc"))
@@ -945,7 +999,7 @@ df_gen_pneumo <- read.csv("inputs/genData_all.csv") %>%
       TRUE ~ workPoppunk_qc
     )
   ) %>% 
-  dplyr::filter(workPoppunk_qc == "pass_qc") %>% 
+  # dplyr::filter(workPoppunk_qc == "pass_qc") %>% 
   dplyr::mutate(
     serotype_classification_PCV13 = case_when(
       workWGS_kity_predicted_serotype_regroup %in% c("1", "3", "4", "5", "7F") ~ "VT",
@@ -961,6 +1015,14 @@ df_gen_pneumo <- read.csv("inputs/genData_all.csv") %>%
       serotype_final_decision %in% c("1", "3", "4", "5", "7F",
                                      "6A", "6B", "9V", "14", "18C",
                                      "19A", "19F", "23F") ~ "VT",
+      serotype_final_decision == "untypeable" ~ "untypeable",
+      TRUE ~ "NVT"
+    ),
+    serotype_classification_PCV15_final_decision = case_when(
+      serotype_final_decision %in% c("1", "3", "4", "5", "7F",
+                                     "6A", "6B", "9V", "14", "18C",
+                                     "19A", "19F", "23F",
+                                     "22F", "33F") ~ "VT",
       serotype_final_decision == "untypeable" ~ "untypeable",
       TRUE ~ "NVT"
     )

@@ -362,6 +362,8 @@ write.csv(compile_all_report, "outputs/epi_all_descriptive_percentages_report.cs
 # Data analyses process for genData ############################################
 # I separate genData to 2 groups: pneumo & interSp
 df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv") %>% 
+  dplyr::filter(workPoppunk_qc == "pass_qc") %>%
+  # dplyr::filter(workWGS_species_pw == "Streptococcus pneumoniae") %>% 
   dplyr::mutate(
     serotype_final_decision = case_when(
       serotype_final_decision == "mixed serotypes/serogroups" ~ "mixed serogroups",
@@ -388,6 +390,8 @@ df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pne
                                        "37F", "38", "39",
                                        "untypeable")),
     serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                          levels = c("VT", "NVT", "untypeable")),
+    serotype_classification_PCV15_final_decision = factor(serotype_classification_PCV13_final_decision,
                                                           levels = c("VT", "NVT", "untypeable"))
                 ) %>%
   glimpse()

@@ -175,7 +175,7 @@ compile_all_report_with_pValues <- dplyr::left_join(
   by = c("variable"),
   relationship = "many-to-many"
 ) %>% 
-  dplyr::filter(estimate != 1) %>% # rese amat
+  # dplyr::filter(estimate != 1) %>% # rese amat
   dplyr::select(-value.y) %>% 
   dplyr::rename(value = value.x) %>% 
   # view() %>%

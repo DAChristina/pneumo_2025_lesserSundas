@@ -405,7 +405,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$serotype_classification_PCV13_final_decision),
-    width=0.001,
+    width=0.02,
     offset=0.05
   ) +
   scale_fill_manual(
@@ -427,7 +427,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_chloramphenicol),
-    width=0.001,
+    width=0.02,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -447,7 +447,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_clindamycin),
-    width=0.001,
+    width=0.02,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -467,7 +467,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_erythromycin),
-    width=0.001,
+    width=0.02,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -487,7 +487,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_fluoroquinolones),
-    width=0.001,
+    width=0.02,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -507,7 +507,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_tetracycline),
-    width=0.001,
+    width=0.02,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -522,16 +522,16 @@ tree_amr_pp <- show_pp %<+%
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   ) +
-  # trimethoprim
+  # antifolates
   ggnewscale::new_scale_fill() +
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
-    mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_trimethoprim),
-    width=0.001,
+    mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_class_antifolates),
+    width=0.02,
     offset=0.1
   ) +
   scale_fill_viridis_d(
-    name = "Trimethoprim",
+    name = "Antifolates",
     option = "C",
     direction = -1,
     guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
@@ -542,132 +542,12 @@ tree_amr_pp <- show_pp %<+%
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   ) +
-  # sulfamethoxazole
-  ggnewscale::new_scale_fill() +
-  ggtreeExtra::geom_fruit(
-    geom=geom_tile,
-    mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_sulfamethoxazole),
-    width=0.001,
-    offset=0.1
-  ) +
-  scale_fill_viridis_d(
-    name = "Sulfamethoxazole",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3, order = 8)
-  ) +
-  theme(
-    legend.title=element_text(size=12), 
-    legend.text=element_text(size=9),
-    legend.spacing.y = unit(0.02, "cm")
-  ) +
-  # cotrimoxazole
-  ggnewscale::new_scale_fill() +
-  ggtreeExtra::geom_fruit(
-    geom=geom_tile,
-    mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_cotrimoxazole),
-    width=0.001,
-    offset=0.1
-  ) +
-  scale_fill_viridis_d(
-    name = "Cotrimoxazole",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3, order = 9)
-  ) +
-  theme(
-    legend.title=element_text(size=12), 
-    legend.text=element_text(size=9),
-    legend.spacing.y = unit(0.02, "cm")
-  ) +
-  # amoxicillin
-  ggnewscale::new_scale_fill() +
-  ggtreeExtra::geom_fruit(
-    geom=geom_tile,
-    mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_amoxicillin),
-    width=0.001,
-    offset=0.1
-  ) +
-  scale_fill_viridis_d(
-    name = "Amoxicillin",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3, order = 10)
-  ) +
-  theme(
-    legend.title=element_text(size=12), 
-    legend.text=element_text(size=9),
-    legend.spacing.y = unit(0.02, "cm")
-  ) +
-  # ceftriaxone
-  ggnewscale::new_scale_fill() +
-  ggtreeExtra::geom_fruit(
-    geom = geom_tile,
-    mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_ceftriaxone),
-    width=0.001,
-    offset = 0.1
-  ) +
-  scale_fill_viridis_d(
-    name = "Ceftriaxone",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3, order = 11)
-  ) +
-  theme(
-    legend.title = element_text(size = 12),
-    legend.text = element_text(size = 9),
-    legend.spacing.y = unit(0.02, "cm")
-  ) +
-  # cefotaxime
-  ggnewscale::new_scale_fill() +
-  ggtreeExtra::geom_fruit(
-    geom = geom_tile,
-    mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_cefotaxime),
-    width=0.001,
-    offset = 0.1
-  ) +
-  scale_fill_viridis_d(
-    name = "Cefotaxime",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3, order = 12)
-  ) +
-  theme(
-    legend.title = element_text(size = 12),
-    legend.text = element_text(size = 9),
-    legend.spacing.y = unit(0.02, "cm")
-  ) +
-  # cefuroxime
-  ggnewscale::new_scale_fill() +
-  ggtreeExtra::geom_fruit(
-    geom = geom_tile,
-    mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_cefuroxime),
-    width=0.001,
-    offset = 0.1
-  ) +
-  scale_fill_viridis_d(
-    name = "Cefuroxime",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 3, order = 13)
-  ) +
-  theme(
-    legend.title = element_text(size = 12),
-    legend.text = element_text(size = 9),
-    legend.spacing.y = unit(0.02, "cm")
-  ) +
   # meropenem
   ggnewscale::new_scale_fill() +
   ggtreeExtra::geom_fruit(
     geom = geom_tile,
     mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_meropenem),
-    width=0.001,
+    width = 0.02,
     offset = 0.1
   ) +
   scale_fill_viridis_d(
@@ -682,20 +562,40 @@ tree_amr_pp <- show_pp %<+%
     legend.text = element_text(size = 9),
     legend.spacing.y = unit(0.02, "cm")
   ) +
-  # penicillin
+  # penicillins
   ggnewscale::new_scale_fill() +
   ggtreeExtra::geom_fruit(
     geom = geom_tile,
-    mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_penicillin),
-    width=0.001,
+    mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_class_penicillins),
+    width = 0.02,
     offset = 0.1
   ) +
   scale_fill_viridis_d(
-    name = "Penicillin",
+    name = "Penicillins",
     option = "C",
     direction = -1,
     guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
                          ncol = 3, order = 15)
+  ) +
+  theme(
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # cephalosporins
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom = geom_tile,
+    mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_class_cephalosporins),
+    width = 0.02,
+    offset = 0.1
+  ) +
+  scale_fill_viridis_d(
+    name = "Cephalosporins",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 3, order = 16)
   ) +
   theme(
     legend.title = element_text(size = 12),
