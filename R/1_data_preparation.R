@@ -725,11 +725,31 @@ df_gen_all <- dplyr::left_join(
         workWGS_AMR_penicillin_nonMeningitis == "S" | workWGS_AMR_amoxicillin == "S" ~ "S",
         TRUE ~ "NF"
       ),
-      workWGS_AMR_class_antifolates = case_when(
+      workWGS_AMR_class_antifolates = case_when( # technically including workWGS_AMR_cotrimoxazole
         workWGS_AMR_trimethoprim == "R (folA_I100L)" & workWGS_AMR_sulfamethoxazole == "R (folP_57-70)" ~ "R (folA_I100L & folP_57-70)",
         workWGS_AMR_trimethoprim == "NF" & workWGS_AMR_sulfamethoxazole == "R (folP_57-70)" ~ "R (folP_57-70)",
         workWGS_AMR_trimethoprim == "R (folA_I100L)" & workWGS_AMR_sulfamethoxazole == "NF" ~ "R (folA_I100L)",
         TRUE ~ "NF"
+      ),
+      # define MDR flag
+      workWGS_AMR_logic_class_amphenicols = str_detect(workWGS_AMR_chloramphenicol, "^R"),
+      workWGS_AMR_logic_class_lincosamides = str_detect(workWGS_AMR_clindamycin, "^R"),
+      workWGS_AMR_logic_class_macrolides = str_detect(workWGS_AMR_erythromycin, "^R"),
+      workWGS_AMR_logic_class_quinolones = str_detect(workWGS_AMR_fluoroquinolones, "^R"),
+      workWGS_AMR_logic_class_aminoglycosides = str_detect(workWGS_AMR_kanamycin, "^R"),
+      workWGS_AMR_logic_class_oxazolidinones = str_detect(workWGS_AMR_linezolid, "^R"),
+      workWGS_AMR_logic_class_tetracyclines = str_detect(workWGS_AMR_tetracycline, "^R"),
+      workWGS_AMR_logic_class_carbapenems = str_detect(workWGS_AMR_meropenem, "^R"),
+      
+      workWGS_AMR_logic_class_cephalosporins = str_detect(workWGS_AMR_class_cephalosporins, "^R"),
+      workWGS_AMR_logic_class_penicillins = str_detect(workWGS_AMR_class_penicillins, "^R"),    
+      workWGS_AMR_logic_class_antifolates = str_detect(workWGS_AMR_class_antifolates, "^R"),
+      
+      workWGS_AMR_logic_class_counts = rowSums(across(starts_with("workWGS_AMR_logic_class_")), na.rm = TRUE),
+      workWGS_AMR_MDR_flag = case_when(
+        workWGS_AMR_logic_class_counts >= 3 ~ "MDR",
+        workWGS_AMR_logic_class_counts >= 0 ~ "non-MDR",
+        TRUE ~ NA_character_
       )
     )
   ,
@@ -847,7 +867,9 @@ test_serotype_compile <- df_gen_all %>%
 
 # test cleaned AMR
 amr <- df_gen_all %>% 
-  dplyr::select(contains("_AMR_")) %>% 
+  dplyr::select(specimen_id,
+                workWGS_species_pw,
+                contains("_AMR_")) %>% 
   glimpse()
 
 for (col in colnames(amr)) {

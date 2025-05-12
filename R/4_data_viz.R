@@ -53,6 +53,8 @@ df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pne
                                                                   "R (folA_I100L)",
                                                                   "R (folP_57-70)",
                                                                   "R (folA_I100L & folP_57-70)")),
+                workWGS_AMR_MDR_flag = factor(workWGS_AMR_MDR_flag,
+                                              levels = c("non-MDR", "MDR"))
                 )
 tre_pp <- ape::read.tree("raw_data/result_poppunk/rapidnj_no_GPSC/rapidnj_no_GPSC_core_NJ.tree")
 tre_pp$tip.label <- gsub("^Streptococcus_pneumoniae_", "", tre_pp$tip.label)
@@ -562,6 +564,26 @@ tree_amr_raxml <- show_raxml %<+%
     direction = -1,
     guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
                          ncol = 3, order = 16)
+  ) +
+  theme(
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # MDR flag
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom = geom_tile,
+    mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_MDR_flag),
+    width = 0.02,
+    offset = 0.1
+  ) +
+  scale_fill_viridis_d(
+    name = "MDR Flag",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 3, order = 17)
   ) +
   theme(
     legend.title = element_text(size = 12),

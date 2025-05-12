@@ -405,7 +405,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$serotype_classification_PCV13_final_decision),
-    width=0.02,
+    width=0.001,
     offset=0.05
   ) +
   scale_fill_manual(
@@ -427,7 +427,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_chloramphenicol),
-    width=0.02,
+    width=0.001,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -447,7 +447,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_clindamycin),
-    width=0.02,
+    width=0.001,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -467,7 +467,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_erythromycin),
-    width=0.02,
+    width=0.001,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -487,7 +487,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_fluoroquinolones),
-    width=0.02,
+    width=0.001,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -507,7 +507,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_tetracycline),
-    width=0.02,
+    width=0.001,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -527,7 +527,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
     mapping=aes(fill=df_epi_gen_pneumo$workWGS_AMR_class_antifolates),
-    width=0.02,
+    width=0.001,
     offset=0.1
   ) +
   scale_fill_viridis_d(
@@ -547,7 +547,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom = geom_tile,
     mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_meropenem),
-    width = 0.02,
+    width = 0.001,
     offset = 0.1
   ) +
   scale_fill_viridis_d(
@@ -567,7 +567,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom = geom_tile,
     mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_class_penicillins),
-    width = 0.02,
+    width = 0.001,
     offset = 0.1
   ) +
   scale_fill_viridis_d(
@@ -587,7 +587,7 @@ tree_amr_pp <- show_pp %<+%
   ggtreeExtra::geom_fruit(
     geom = geom_tile,
     mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_class_cephalosporins),
-    width = 0.02,
+    width = 0.001,
     offset = 0.1
   ) +
   scale_fill_viridis_d(
@@ -596,6 +596,26 @@ tree_amr_pp <- show_pp %<+%
     direction = -1,
     guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
                          ncol = 3, order = 16)
+  ) +
+  theme(
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # MDR flag
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom = geom_tile,
+    mapping = aes(fill = df_epi_gen_pneumo$workWGS_AMR_MDR_flag),
+    width = 0.001,
+    offset = 0.1
+  ) +
+  scale_fill_viridis_d(
+    name = "MDR Flag",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 3, order = 17)
   ) +
   theme(
     legend.title = element_text(size = 12),
