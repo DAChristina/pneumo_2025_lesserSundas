@@ -362,13 +362,13 @@ write.csv(compile_all_report, "outputs/epi_all_descriptive_percentages_report.cs
 # Data analyses process for genData ############################################
 # I separate genData to 2 groups: pneumo & interSp
 df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv") %>% 
-  dplyr::filter(workPoppunk_qc == "pass_qc") %>%
-  # dplyr::filter(workWGS_species_pw == "Streptococcus pneumoniae") %>% 
+  # dplyr::filter(workPoppunk_qc == "pass_qc") %>%
+  dplyr::filter(workWGS_species_pw == "Streptococcus pneumoniae") %>% 
   dplyr::mutate(
     serotype_final_decision = case_when(
       serotype_final_decision == "mixed serotypes/serogroups" ~ "mixed serogroups",
       TRUE ~ serotype_final_decision
-      ),
+    ),
     serotype_final_decision = factor(serotype_final_decision,
                                      levels = c(
                                        # VT
@@ -393,8 +393,11 @@ df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pne
                                                           levels = c("VT", "NVT", "untypeable")),
     serotype_classification_PCV15_final_decision = factor(serotype_classification_PCV13_final_decision,
                                                           levels = c("VT", "NVT", "untypeable"))
-                ) %>%
+  ) %>%
   glimpse()
+
+table(df_epi_gen_pneumo$area)
+# I think ideally can be compared by proportion/percentage instead
 
 # Quick viz serotypes
 # Compute percentage
@@ -412,14 +415,51 @@ df_serotype_summary <- df_epi_gen_pneumo %>%
   # view() %>% 
   glimpse()
 
+df_serotype_classification_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(serotype_classification_PCV13_final_decision) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  glimpse()
+
+df_serotype_classification_perArea_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(serotype_classification_PCV13_final_decision, area) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  glimpse()
+
+# kruskall-wallis test is not appropriate
+kruskal.test(percentage ~ area,
+             data = df_serotype_classification_perArea_summary)
+
+
+# chi-square or fisher test
+contingency_table <- df_serotype_classification_perArea_summary %>% 
+  dplyr::select(-percentage) %>%
+  tidyr::pivot_wider(names_from = area, values_from = n) %>%
+  dplyr::mutate(across(c(lombok, sumbawa), as.numeric)) %>%
+  tibble::column_to_rownames("serotype_classification_PCV13_final_decision") %>%
+  as.matrix()
+
+# View the contingency table
+print(contingency_table)
+
+# Run the Chi-square test
+test_chisq <- chisq.test(contingency_table)
+test_chisq$p.value
+test_fisher <- fisher.test(contingency_table)
+
+# conflicted KW-chisq results
+
+
+
+
+
 ser1 <- ggplot(df_serotype_summary, aes(x = serotype_final_decision, y = percentage,
-                                fill = serotype_classification_PCV13_final_decision)) +
+                                        fill = serotype_classification_PCV13_final_decision)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = paste0(round(percentage, 1), "%")), vjust = -0.5, size = 3) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   labs(x = " ", y = "Percentage", 
        # title = "All Serotypes"
-       ) +
+  ) +
   scale_fill_manual(values = c(col_map)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
@@ -442,22 +482,22 @@ df_serotype_area_summary <- df_epi_gen_pneumo %>%
                   TRUE ~ serotype_classification_PCV13_final_decision
                 ),
                 serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
-                                                       levels = c("VT", "NVT", " ")))
+                                                                      levels = c("VT", "NVT", " ")))
 
 ser2 <- ggplot(df_serotype_area_summary, aes(x = serotype_final_decision,
-                                     y = percentage,
-                                     fill = area)) +
+                                             y = percentage,
+                                             fill = area)) +
   geom_bar(stat = "identity", position = position_dodge()) +
   # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5, size = 3) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   facet_grid(~ serotype_classification_PCV13_final_decision,
              scales = "free_x",
              space = "free_x"
-             ) +
+  ) +
   scale_fill_manual(values = c(col_map)) +
   labs(x = "Category", y = "Percentage", 
        # title = "All Serotypes"
-       ) +
+  ) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
         legend.position = c(0.02, 0.75),
@@ -467,9 +507,9 @@ ser2 <- ggplot(df_serotype_area_summary, aes(x = serotype_final_decision,
         legend.title = element_blank(),
         legend.margin = margin(t = -50),
         legend.spacing.y = unit(-0.3, "cm")) # +
-  # facet_wrap(~ serotype_classification_PCV13_final_decision, nrow = 1, scales = "free_x")
+# facet_wrap(~ serotype_classification_PCV13_final_decision, nrow = 1, scales = "free_x")
 
-png(file = "pictures/genData_serotypes_classification.png", width = 23, height = 25, unit = "cm", res = 600)
+png(file = "pictures/genData_serotypes_classification_filterPneumo.png", width = 23, height = 25, unit = "cm", res = 600)
 cowplot::plot_grid(ser1, ser2,
                    nrow = 2,
                    labels = c("A", "B"))
@@ -481,11 +521,11 @@ df_serotype_PCV13_summary <- df_epi_gen_pneumo %>%
   dplyr::summarise(count = n(), .groups = "drop") %>%
   dplyr::mutate(percentage = count / sum(count) * 100,
                 serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
-                                                       levels = c("VT", "NVT", "untypeable")))
+                                                                      levels = c("VT", "NVT", "untypeable")))
 
 ser3 <- ggplot(df_serotype_PCV13_summary, aes(x = vaccination_pcv13_dc_n,
-                                             y = percentage,
-                                             fill = serotype_classification_PCV13_final_decision)) +
+                                              y = percentage,
+                                              fill = serotype_classification_PCV13_final_decision)) +
   # geom_line(size = 1.5) +
   geom_bar(stat = "identity", position = position_dodge()) +
   # geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5, size = 3) +
@@ -517,7 +557,7 @@ df_serotype_PCV13_grouped <- df_epi_gen_pneumo %>%
                   TRUE ~ serotype_classification_PCV13_final_decision
                 ),
                 serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
-                                                       levels = c("VT", "NVT", " ")))
+                                                                      levels = c("VT", "NVT", " ")))
 
 ser4 <- ggplot(df_serotype_PCV13_grouped, aes(x = serotype_final_decision,
                                               y = percentage,
@@ -547,14 +587,14 @@ ser4 <- ggplot(df_serotype_PCV13_grouped, aes(x = serotype_final_decision,
         legend.spacing.y = unit(-0.3, "cm"))
 
 
-png(file = "pictures/genData_serotypes_vaccination_classification.png", width = 23, height = 25, unit = "cm", res = 600)
+png(file = "pictures/genData_serotypes_vaccination_classification_filterPneumo.png", width = 23, height = 25, unit = "cm", res = 600)
 cowplot::plot_grid(ser3, ser4,
                    nrow = 2,
                    labels = c("A", "B"))
 dev.off()
 
 # trial multicowplot
-png(file = "pictures/genData_serotypes_vaccination_classification_combined.png", width = 23, height = 25, unit = "cm", res = 600)
+png(file = "pictures/genData_serotypes_vaccination_classification_combined_filterPneumo.png", width = 23, height = 25, unit = "cm", res = 600)
 cowplot::plot_grid(ser1, ser3,
                    ser2, ser4,
                    nrow = 2,
@@ -634,14 +674,14 @@ ser6 <- ggplot(df_serotype_age_grouped, aes(x = serotype_final_decision,
         legend.spacing.y = unit(-0.3, "cm"))
 
 
-png(file = "pictures/genData_serotypes_vaccination_classification_by_age.png", width = 23, height = 25, unit = "cm", res = 600)
+png(file = "pictures/genData_serotypes_vaccination_classification_by_age_filterPneumo.png", width = 23, height = 25, unit = "cm", res = 600)
 cowplot::plot_grid(ser5, ser6,
                    nrow = 2,
                    labels = c("A", "B"))
 dev.off()
 
 # trial multicowplot
-png(file = "pictures/genData_serotypes_vaccination_classification_combined_by_age.png", width = 23, height = 25, unit = "cm", res = 600)
+png(file = "pictures/genData_serotypes_vaccination_classification_combined_by_age_filterPneumo.png", width = 23, height = 25, unit = "cm", res = 600)
 cowplot::plot_grid(ser1, ser5,
                    ser2, ser6,
                    nrow = 2,

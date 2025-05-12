@@ -131,6 +131,7 @@ cols_with_na_sums <- df_epi_chars %>%
                 NAs != 0) %>% 
   glimpse()
 
+# odds ratio using epitools
 or_matrix_all <- generate_or_matrix_report(df_input = df_epi_chars,
                                            binary_disease = "area")
 
@@ -168,6 +169,38 @@ or_matrix_table_report <- dplyr::full_join(
   # view() %>% 
   glimpse()
 
+# p-values chi-squares or fisher exact tools
+ptest_matrix_all <- generate_or_chisq_report(df_input = df_epi_chars,
+                                           binary_disease = "area")
+
+ptest_matrix_table_report <- purrr::imap_dfr(ptest_matrix_all, ~{
+  chisq <- .x$chisq_result
+  fisher <- .x$fisher_result
+
+  tidyr::tibble(
+    variable = .y,
+    chisq_stat = chisq$statistic %||% NA,
+    chisq_df = chisq$parameter %||% NA,
+    chisq_p = chisq$p.value %||% NA,
+    chisq_method = chisq$method %||% NA_character_,
+    
+    fisher_or = fisher$estimate %||% NA,
+    fisher_or_lo = fisher$conf.int[[1]] %||% NA,
+    fisher_or_hi = fisher$conf.int[[2]] %||% NA,
+    fisher_p = fisher$p.value %||% NA,
+    fisher_method = fisher$method %||% NA_character_
+  )
+  }) %>% 
+  dplyr::mutate(
+    significance = case_when(
+      fisher_p < 0.05 | chisq_p < 0.05 ~ "occur",
+      !is.na(fisher_p) & !is.na(chisq_p) ~ "no",
+      TRUE ~ NA_character_
+      )
+  ) %>% 
+  glimpse()
+
+
 # combine report
 compile_all_report_with_pValues <- dplyr::left_join(
   read.csv("outputs/epi_all_descriptive_percentages_report.csv"),
@@ -178,15 +211,23 @@ compile_all_report_with_pValues <- dplyr::left_join(
   # dplyr::filter(estimate != 1) %>% # rese amat
   dplyr::select(-value.y) %>% 
   dplyr::rename(value = value.x) %>% 
+  dplyr::left_join(
+    ptest_matrix_table_report,
+    by = c("variable")
+  ) %>% 
   # view() %>%
   glimpse()
 
 write.csv(compile_all_report_with_pValues, "outputs/epi_all_descriptive_percentages_report_with_pValues.csv",
           row.names = F)
 
-# trial chisq lombok vs. sumbawa
-chisq.test(df_epi_chars$area, df_epi_chars$final_pneumo_decision)
 
+# trial chisq lombok vs. sumbawa
+test <- chisq.test(df_epi_chars$area, df_epi_chars$final_pneumo_decision)
+test
+
+test <- chisq.test(df_epi_chars$area, df_epi_chars$tribe)
+test$observed
 
 # try glm crude OR report
 or_univar_all <- generate_univar_report(df_input = df_epi_chars %>% 
