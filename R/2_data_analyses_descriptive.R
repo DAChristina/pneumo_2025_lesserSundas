@@ -689,30 +689,6 @@ cowplot::plot_grid(ser1, ser5,
 dev.off()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # focused on inter-species
 df_gen_interSp <- read.csv("inputs/genData_all.csv") %>% 
   dplyr::filter(workWGS_stats_pneumo_cutoff == "> 2.3 Mb") %>% # S. christatus automatically deleted 
@@ -720,12 +696,132 @@ df_gen_interSp <- read.csv("inputs/genData_all.csv") %>%
   glimpse()
 
 
+################################################################################
+# AMR analyses & viz
+# load df_epi_geen_pneumo first
+df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv") %>% 
+  # dplyr::filter(workPoppunk_qc == "pass_qc") %>%
+  dplyr::filter(workWGS_species_pw == "Streptococcus pneumoniae") %>% 
+  dplyr::mutate(
+    serotype_final_decision = case_when(
+      serotype_final_decision == "mixed serotypes/serogroups" ~ "mixed serogroups",
+      TRUE ~ serotype_final_decision
+    ),
+    serotype_final_decision = factor(serotype_final_decision,
+                                     levels = c(
+                                       # VT
+                                       # "3", "6A/6B", "6A/6B/6C/6D", "serogroup 6",
+                                       # "14", "17F", "18C/18B", "19A", "19F", "23F",
+                                       "1", "3", "4", "5", "7F",
+                                       "6A", "6B", "9V", "14", "18C",
+                                       "19A", "19F", "23F",
+                                       # NVT
+                                       # "7C", "10A", "10B", "11A/11D", "13", "15A", "15B/15C",
+                                       # "16F", "19B", "20", "23A", "23B", "24F/24B", "25F/25A/38",
+                                       # "28F/28A", "31", "34", "35A/35C/42", "35B/35D", "35F",
+                                       # "37", "39", "mixed serogroups",
+                                       "serogroup 6", "6C", "7C", "10A", "10B",
+                                       "11A", "13", "15A", "15B", "15C", "16F",
+                                       "17F", "18B", "19B", "20", "23A", "23B",
+                                       "23B1", "24F", "25B", "28A", "31", "33B",
+                                       "34", "35A", "35B", "35C", "35F", "37",
+                                       "37F", "38", "39",
+                                       "untypeable")),
+    serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                          levels = c("VT", "NVT", "untypeable")),
+    serotype_classification_PCV15_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                          levels = c("VT", "NVT", "untypeable"))
+  ) %>%
+  glimpse()
 
 
+# AMR flag
+df_amr_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(workWGS_AMR_MDR_flag, serotype_final_decision) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::select(serotype_final_decision,
+                    serotype_classification_PCV13_final_decision)
+    ,
+    by = "serotype_final_decision"
+  ) %>% 
+  dplyr::distinct() %>% 
+  # view() %>% 
+  glimpse()
+
+df_amr_classification_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(workWGS_AMR_MDR_flag) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  glimpse()
+
+df_amr_classification_perArea_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(workWGS_AMR_MDR_flag, area) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  glimpse()
 
 
+# MDR flag
+df_amr_mdr_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(workWGS_AMR_MDR_flag, serotype_final_decision) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::select(serotype_final_decision,
+                    serotype_classification_PCV13_final_decision) %>% 
+      dplyr::mutate(
+        # slightly change classifications
+        serotype_classification_PCV13_final_decision = case_when(
+          serotype_classification_PCV13_final_decision == "untypeable" ~ " ",
+          TRUE ~ serotype_classification_PCV13_final_decision
+        ),
+        serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                              levels = c("VT", "NVT", " "))
+      )
+    ,
+    by = "serotype_final_decision"
+  ) %>% 
+  dplyr::distinct() %>% 
+  # view() %>%
+  glimpse()
 
+df_amr_mdr_classification_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(workWGS_AMR_MDR_flag) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  glimpse()
 
+df_amr_mdr_classification_perArea_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(workWGS_AMR_MDR_flag, area) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  glimpse()
+
+# test plot
+ggplot(df_amr_mdr_summary, aes(x = serotype_final_decision,
+                                    y = percentage,
+                                    fill = workWGS_AMR_MDR_flag)) +
+  # geom_line(size = 1.5) +
+  geom_bar(stat = "identity", position = position_stack()) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  facet_grid(~ serotype_classification_PCV13_final_decision,
+             scales = "free_x",
+             space = "free_x"
+  ) +
+  # geom_text(aes(label = paste0(round(percentage, 2), "%")),
+  #           position = position_dodge(width = 0.9),
+  #           vjust = -0.3) +
+  scale_fill_manual(values = c(col_map)) +
+  labs(x = "Age Groups", y = "Percentage", 
+       # title = "All Serotypes"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = c(0.02, 0.75),
+        legend.direction = "vertical",
+        legend.justification = c("left", "top"),
+        legend.background = element_rect(fill = NA, color = NA),
+        legend.title = element_blank(),
+        legend.margin = margin(t = -50),
+        legend.spacing.y = unit(-0.3, "cm"))
 
 
 
