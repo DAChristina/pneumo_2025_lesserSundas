@@ -203,7 +203,7 @@ ptest_matrix_table_report <- purrr::imap_dfr(ptest_matrix_all, ~{
 
 # combine report
 compile_all_report_with_pValues <- dplyr::left_join(
-  read.csv("outputs/epi_all_descriptive_percentages_report.csv"),
+  read.csv("outputs/epi_all_descriptive_percentages_report_corrected.csv"),
   or_matrix_table_report,
   by = c("variable"),
   relationship = "many-to-many"
@@ -215,10 +215,11 @@ compile_all_report_with_pValues <- dplyr::left_join(
     ptest_matrix_table_report,
     by = c("variable")
   ) %>% 
+  dplyr::distinct(variable, value, .keep_all = T) %>% 
   # view() %>%
   glimpse()
 
-write.csv(compile_all_report_with_pValues, "outputs/epi_all_descriptive_percentages_report_with_pValues.csv",
+write.csv(compile_all_report_with_pValues, "outputs/epi_all_descriptive_percentages_report_corrected_with_pValues.csv",
           row.names = F)
 
 

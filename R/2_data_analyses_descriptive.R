@@ -243,8 +243,8 @@ df_compiled_positivePneumo <- dplyr::left_join(
       is.na(count_positivePneumo) ~ 0,
       TRUE ~ count_positivePneumo
       ),
-    percent = round(count_positivePneumo/count_all*100, 2),
-    report_positive_all = paste0(percent, "% (", count_positivePneumo, "/", count_all, ")")
+    percent = round(count_positivePneumo/count_all*100, 1),
+    report_positive_all = paste0(count_positivePneumo, " (", percent, "%)")
   ) %>% 
   dplyr::select(-count_all,
                 -count_positivePneumo,
@@ -276,8 +276,8 @@ df_area_positivePneumo <- dplyr::left_join(
       is.na(count_positivePneumo) ~ 0,
       TRUE ~ count_positivePneumo
     ),
-    percent = round(count_positivePneumo/count_perArea*100, 2),
-    report_positive_perArea = paste0(percent, "% (", count_positivePneumo, "/", count_perArea, ")")
+    percent = round(count_positivePneumo/count_perArea*100, 1),
+    report_positive_perArea = paste0(count_positivePneumo, " (", percent, "%)")
   ) %>% 
   dplyr::select(-count_perArea,
                 -count_positivePneumo,
@@ -295,7 +295,7 @@ compile_positive_all <- dplyr::left_join(
   df_compiled_positivePneumo, df_area_positivePneumo,
   by = c("variable", "value")
 ) %>% 
-  view() %>% 
+  # view() %>% 
   glimpse()
 
 # compile all assessment
@@ -306,8 +306,8 @@ df_assessed <- df_epi_sorted %>%
   dplyr::group_by(variable, value) %>% 
   dplyr::summarise(count_all = n(), .groups = "drop") %>% 
   dplyr::mutate(
-    percent = round(count_all/900*100, 2), # total n = 900
-    report_assessed_all = paste0(percent, "% (", count_all, "/900)")
+    percent = round(count_all/900*100, 1), # total n = 900
+    report_assessed_all = paste0(count_all, " (", percent, "%)")
   ) %>% 
   dplyr::select(-count_all,
                 -percent) %>% 
@@ -322,8 +322,8 @@ df_assessed_area <- df_epi_sorted %>%
   dplyr::group_by(variable, value, area) %>% 
   dplyr::summarise(count_assessed_perArea = n(), .groups = "drop") %>% 
   dplyr::mutate(
-    percent = round(count_assessed_perArea/450*100, 2), # total n = 450 per-area
-    report_assessed_perArea = paste0(percent, "% (", count_assessed_perArea, "/450)")
+    percent = round(count_assessed_perArea/450*100, 1), # total n = 450 per-area
+    report_assessed_perArea = paste0(count_assessed_perArea, " (", percent, "%)")
   ) %>% 
   dplyr::select(-count_assessed_perArea,
                 -percent) %>% 
@@ -355,7 +355,7 @@ compile_all_report <- dplyr::left_join(
   # view() %>% 
   glimpse()
 
-write.csv(compile_all_report, "outputs/epi_all_descriptive_percentages_report.csv",
+write.csv(compile_all_report, "outputs/epi_all_descriptive_percentages_report_corrected.csv",
           row.names = F)
 
 
@@ -993,41 +993,27 @@ amr_ser_gpsc_st_long <- df_epi_gen_pneumo %>%
 
 # seems like some serotypes have MDR characteristics; will filter out this later
 
-
-# MDR flag
-df_amr_summary <- df_epi_gen_pneumo %>% 
-  dplyr::count(workWGS_AMR_MDR_flag, serotype_final_decision) %>%
-  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+# numeric AMR counts
+df_amr_counts_summary <- df_epi_gen_pneumo %>% 
+  dplyr::group_by(workWGS_AMR_logic_class_counts, serotype_final_decision) %>%
+  dplyr::summarise(count = n()) %>% 
   dplyr::left_join(
     df_epi_gen_pneumo %>% 
-      dplyr::select(serotype_final_decision,
-                    serotype_classification_PCV13_final_decision)
+      dplyr::group_by(serotype_final_decision) %>%
+      dplyr::summarise(count_serotype = n())
     ,
     by = "serotype_final_decision"
   ) %>% 
-  dplyr::distinct() %>% 
-  # view() %>% 
-  glimpse()
-
-df_amr_classification_summary <- df_epi_gen_pneumo %>% 
-  dplyr::count(workWGS_AMR_MDR_flag) %>%
-  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
-  glimpse()
-
-df_amr_classification_perArea_summary <- df_epi_gen_pneumo %>% 
-  dplyr::count(workWGS_AMR_MDR_flag, area) %>%
-  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
-  glimpse()
-
-
-# MDR flag
-df_amr_mdr_summary <- df_epi_gen_pneumo %>% 
-  dplyr::count(workWGS_AMR_MDR_flag, serotype_final_decision) %>%
-  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  dplyr::mutate(
+    percentage = ifelse(workWGS_AMR_logic_class_counts == "MDR",
+                        count/count_serotype*100,
+                        NA_real_),
+    y_pos = count_serotype + 2
+  ) %>% 
   dplyr::left_join(
-    df_epi_gen_pneumo %>% 
+    df_epi_gen_pneumo %>%
       dplyr::select(serotype_final_decision,
-                    serotype_classification_PCV13_final_decision) %>% 
+                    serotype_classification_PCV13_final_decision) %>%
       dplyr::mutate(
         # slightly change classifications
         serotype_classification_PCV13_final_decision = case_when(
@@ -1039,37 +1025,160 @@ df_amr_mdr_summary <- df_epi_gen_pneumo %>%
       )
     ,
     by = "serotype_final_decision"
+  ) %>%
+  dplyr::mutate(
+    workWGS_AMR_logic_class_counts = as.character(workWGS_AMR_logic_class_counts),
+    workWGS_AMR_logic_class_counts = factor(workWGS_AMR_logic_class_counts,
+                                            levels = c("7", "6", "5", "4", "3",
+                                                       "2", "1", "0"))
   ) %>% 
   dplyr::distinct() %>% 
   # view() %>%
   glimpse()
 
-df_amr_mdr_classification_summary <- df_epi_gen_pneumo %>% 
-  dplyr::count(workWGS_AMR_MDR_flag) %>%
-  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
-  glimpse()
-
-df_amr_mdr_classification_perArea_summary <- df_epi_gen_pneumo %>% 
-  dplyr::count(workWGS_AMR_MDR_flag, area) %>%
-  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
-  glimpse()
-
 # test plot
-ggplot(df_amr_mdr_summary, aes(x = serotype_final_decision,
-                                    y = percentage,
-                                    fill = workWGS_AMR_MDR_flag)) +
+mdr1 <- ggplot(df_amr_counts_summary, aes(x = serotype_final_decision,
+                                          y = count,
+                                          fill = workWGS_AMR_logic_class_counts)) +
   # geom_line(size = 1.5) +
   geom_bar(stat = "identity", position = position_stack()) +
-  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  # scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   facet_grid(~ serotype_classification_PCV13_final_decision,
              scales = "free_x",
              space = "free_x"
   ) +
-  # geom_text(aes(label = paste0(round(percentage, 2), "%")),
-  #           position = position_dodge(width = 0.9),
-  #           vjust = -0.3) +
   scale_fill_manual(values = c(col_map)) +
-  labs(x = "Age Groups", y = "Percentage", 
+  labs(x = " ", y = "Count", 
+       # title = "All Serotypes"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = c(0.02, 0.75),
+        legend.direction = "vertical",
+        legend.justification = c("left", "top"),
+        legend.background = element_rect(fill = NA, color = NA),
+        legend.title = element_blank(),
+        legend.margin = margin(t = -50),
+        legend.spacing.y = unit(-0.3, "cm")) +
+  guides(fill = guide_legend(ncol = 2))
+
+df_amr_counts_classification_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(workWGS_AMR_logic_class_counts) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  glimpse()
+
+df_amr_counts_classification_perArea_summary <- df_epi_gen_pneumo %>% 
+  dplyr::count(workWGS_AMR_logic_class_counts, area) %>%
+  dplyr::mutate(percentage = n / sum(n) * 100) %>% 
+  glimpse()
+
+# test individual GPSC & ST to AMR counts
+df_amr_counts_gpsc_st_long <- df_epi_gen_pneumo %>% 
+  dplyr::group_by(workWGS_AMR_logic_class_counts,
+                  serotype_final_decision,
+                  workWGS_gpsc_strain,
+                  workWGS_MLST_dc_ST) %>%
+  dplyr::summarise(count = n()) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::group_by(serotype_final_decision,
+                      workWGS_gpsc_strain,
+                      workWGS_MLST_dc_ST) %>%
+      dplyr::summarise(count_genomics = n())
+    ,
+    by = c("serotype_final_decision", "workWGS_gpsc_strain", "workWGS_MLST_dc_ST")
+  ) %>% 
+  dplyr::mutate(
+    percentage = ifelse(workWGS_AMR_logic_class_counts >= 3,
+                        count/count_genomics*100,
+                        NA_real_),
+  ) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>%
+      dplyr::select(serotype_final_decision,
+                    serotype_classification_PCV13_final_decision) %>%
+      dplyr::mutate(
+        # slightly change classifications
+        serotype_classification_PCV13_final_decision = case_when(
+          serotype_classification_PCV13_final_decision == "untypeable" ~ " ",
+          TRUE ~ serotype_classification_PCV13_final_decision
+        ),
+        serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                              levels = c("VT", "NVT", " "))
+      )
+    ,
+    by = "serotype_final_decision"
+  ) %>%
+  dplyr::mutate(
+    workWGS_AMR_logic_class_counts = as.character(workWGS_AMR_logic_class_counts),
+    workWGS_AMR_logic_class_counts = factor(workWGS_AMR_logic_class_counts,
+                                            levels = c("7", "6", "5", "4", "3",
+                                                       "2", "1", "0"))
+  ) %>% 
+  dplyr::distinct() %>% 
+  # view() %>%
+  glimpse()
+
+
+# MDR flag
+df_amr_mdr_summary <- df_epi_gen_pneumo %>% 
+  dplyr::group_by(workWGS_AMR_MDR_flag, serotype_final_decision) %>%
+  dplyr::summarise(count = n()) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::group_by(serotype_final_decision) %>%
+      dplyr::summarise(count_serotype = n())
+    ,
+    by = "serotype_final_decision"
+  ) %>% 
+  dplyr::mutate(
+    percentage = ifelse(workWGS_AMR_MDR_flag == "MDR",
+                        count/count_serotype*100,
+                        NA_real_),
+    y_pos = count_serotype + 3
+  ) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>%
+      dplyr::select(serotype_final_decision,
+                    serotype_classification_PCV13_final_decision) %>%
+      dplyr::mutate(
+        # slightly change classifications
+        serotype_classification_PCV13_final_decision = case_when(
+          serotype_classification_PCV13_final_decision == "untypeable" ~ " ",
+          TRUE ~ serotype_classification_PCV13_final_decision
+        ),
+        serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                              levels = c("VT", "NVT", " "))
+      )
+    ,
+    by = "serotype_final_decision"
+  ) %>%
+  dplyr::distinct() %>% 
+  # view() %>%
+  glimpse()
+
+# test plot
+mdr2 <- ggplot(df_amr_mdr_summary, aes(x = serotype_final_decision,
+                                       y = count,
+                                       fill = workWGS_AMR_MDR_flag)) +
+  # geom_line(size = 1.5) +
+  geom_bar(stat = "identity", position = position_stack()) +
+  # scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  facet_grid(~ serotype_classification_PCV13_final_decision,
+             scales = "free_x",
+             space = "free_x"
+  ) +
+  geom_text(aes(x = serotype_final_decision,
+                y = y_pos,
+                label = ifelse(is.na(percentage),
+                               NA,
+                               paste0(round(percentage, 1), "%"))),
+            # position = position_stack(vjust = 1.3),
+            angle = 90,
+            check_overlap = TRUE
+  ) +
+  scale_fill_manual(values = c(col_map)) +
+  labs(x = " ", y = "Count", 
        # title = "All Serotypes"
   ) +
   theme_bw() +
@@ -1082,6 +1191,52 @@ ggplot(df_amr_mdr_summary, aes(x = serotype_final_decision,
         legend.margin = margin(t = -50),
         legend.spacing.y = unit(-0.3, "cm"))
 
+png(file = "pictures/genData_mdr_filterPneumo.png", width = 23, height = 25, unit = "cm", res = 600)
+cowplot::plot_grid(mdr1, mdr2,
+                   nrow = 2,
+                   labels = c("A", "B"))
+dev.off()
+
+# test individual GPSC & ST to MDR
+df_mdr_counts_gpsc_st_long <- df_epi_gen_pneumo %>% 
+  dplyr::group_by(workWGS_AMR_MDR_flag,
+                  serotype_final_decision,
+                  workWGS_gpsc_strain,
+                  workWGS_MLST_dc_ST) %>%
+  dplyr::summarise(count = n()) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::group_by(serotype_final_decision,
+                      workWGS_gpsc_strain,
+                      workWGS_MLST_dc_ST) %>%
+      dplyr::summarise(count_genomics = n())
+    ,
+    by = c("serotype_final_decision", "workWGS_gpsc_strain", "workWGS_MLST_dc_ST")
+  ) %>% 
+  dplyr::mutate(
+    percentage = ifelse(workWGS_AMR_MDR_flag == "MDR",
+                        count/count_genomics*100,
+                        NA_real_),
+  ) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>%
+      dplyr::select(serotype_final_decision,
+                    serotype_classification_PCV13_final_decision) %>%
+      dplyr::mutate(
+        # slightly change classifications
+        serotype_classification_PCV13_final_decision = case_when(
+          serotype_classification_PCV13_final_decision == "untypeable" ~ " ",
+          TRUE ~ serotype_classification_PCV13_final_decision
+        ),
+        serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                              levels = c("VT", "NVT", " "))
+      )
+    ,
+    by = "serotype_final_decision"
+  ) %>%
+  dplyr::distinct() %>% 
+  # view() %>%
+  glimpse()
 
 
 
