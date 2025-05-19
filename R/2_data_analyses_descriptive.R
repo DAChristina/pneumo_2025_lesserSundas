@@ -696,9 +696,9 @@ df_gen_interSp <- read.csv("inputs/genData_all.csv") %>%
   glimpse()
 
 
-################################################################################
-# AMR analyses & viz
-# load df_epi_geen_pneumo first
+
+# AMR analyses & viz ###########################################################
+# load df_epi_gen_pneumo first
 df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv") %>% 
   # dplyr::filter(workPoppunk_qc == "pass_qc") %>%
   dplyr::filter(workWGS_species_pw == "Streptococcus pneumoniae") %>% 
@@ -734,8 +734,267 @@ df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pne
   ) %>%
   glimpse()
 
+# cumulative AMR per-PCV13 vaccine type
+amr_pcv13_long <- df_epi_gen_pneumo %>% 
+  dplyr::select(serotype_classification_PCV13_final_decision,
+                contains("workWGS_AMR_logic_class"),
+                -workWGS_AMR_logic_class_counts
+  ) %>% 
+  tidyr::pivot_longer(
+    cols = contains("workWGS_AMR_logic_class"),
+    names_to = "class",
+    values_to = "logic"
+  ) %>% 
+  dplyr::group_by(serotype_classification_PCV13_final_decision, class, logic) %>%
+  dplyr::summarise(count = n(),
+                   .groups = "drop") %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::select(serotype_classification_PCV13_final_decision,
+                    contains("workWGS_AMR_logic_class"),
+                    -workWGS_AMR_logic_class_counts
+      ) %>% 
+      tidyr::pivot_longer(
+        cols = contains("workWGS_AMR_logic_class"),
+        names_to = "class",
+        values_to = "logic"
+      ) %>% 
+      dplyr::group_by(serotype_classification_PCV13_final_decision, class) %>%
+      dplyr::summarise(count_class = n(),
+                       .groups = "drop")
+    ,
+    by = c("serotype_classification_PCV13_final_decision", "class")
+  ) %>% 
+  dplyr::mutate(
+    percent = count/count_class*100
+  ) %>% 
+  dplyr::filter(
+    logic == "TRUE"
+  ) %>% 
+  # dplyr::group_by(serotype_final_decision, class) %>%
+  # dplyr::summarise(percent = count/sum(count)*100) %>% 
+  # dplyr::left_join(
+  #   df_epi_gen_pneumo %>% 
+  #     dplyr::select(serotype_final_decision,
+  #                   serotype_classification_PCV13_final_decision) %>% 
+  #     dplyr::mutate(
+  #       # slightly change classifications
+  #       serotype_classification_PCV13_final_decision = case_when(
+  #         serotype_classification_PCV13_final_decision == "untypeable" ~ " ",
+  #         TRUE ~ serotype_classification_PCV13_final_decision
+  #       ),
+  #       serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+  #                                                             levels = c("VT", "NVT", " "))
+  #     )
+  #   ,
+  #   by = "serotype_final_decision"
+  #   ,
+  #   relationship = "many-to-many"
+  # ) %>% 
+  dplyr::distinct() %>% 
+  dplyr::mutate(
+    class = gsub("workWGS_AMR_logic_class_", "", class)
+  ) %>% 
+  # view() %>% 
+  glimpse()
 
-# AMR flag
+amr1 <- ggplot(amr_pcv13_long, aes(x = serotype_classification_PCV13_final_decision,
+                                   y = percent,
+                                   fill = class)) +
+  # geom_line(size = 1.5) +
+  geom_bar(stat = "identity", position = position_stack()) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  # geom_text(aes(label = paste0(round(percentage, 2), "%")),
+  #           position = position_dodge(width = 0.9),
+  #           vjust = -0.3) +
+  # scale_fill_manual(values = c(col_map)) +
+  labs(x = " ", y = "Percentage", 
+       # title = "All Serotypes"
+  ) +
+  theme_bw() +
+  theme(legend.position = "none")
+  # theme(axis.text.x = element_text(angle = 0, hjust = 1, size = 10),
+  #       legend.position = "bottom", # c(0.02, 0.75),
+  #       legend.direction = "horizontal",
+  #       legend.justification = c("centre", "top"),
+  #       legend.background = element_rect(fill = NA, color = NA),
+  #       legend.title = element_blank(),
+  #       legend.margin = margin(t = -10),
+  #       legend.spacing.y = unit(-0.3, "cm"))
+
+
+# cumulative AMR per-serotype
+amr_ser_long <- df_epi_gen_pneumo %>% 
+  dplyr::select(serotype_final_decision,
+                contains("workWGS_AMR_logic_class"),
+                -workWGS_AMR_logic_class_counts
+                ) %>% 
+  tidyr::pivot_longer(
+    cols = contains("workWGS_AMR_logic_class"),
+    names_to = "class",
+    values_to = "logic"
+  ) %>% 
+  dplyr::group_by(serotype_final_decision, class, logic) %>%
+  dplyr::summarise(count = n(),
+                   .groups = "drop") %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::select(serotype_final_decision,
+                    contains("workWGS_AMR_logic_class"),
+                    -workWGS_AMR_logic_class_counts
+      ) %>% 
+      tidyr::pivot_longer(
+        cols = contains("workWGS_AMR_logic_class"),
+        names_to = "class",
+        values_to = "logic"
+      ) %>% 
+      dplyr::group_by(serotype_final_decision, class) %>%
+      dplyr::summarise(count_class = n(),
+                       .groups = "drop")
+    ,
+    by = c("serotype_final_decision", "class")
+  ) %>% 
+  dplyr::mutate(
+    percent = count/count_class*100
+  ) %>% 
+  dplyr::filter(
+    logic == "TRUE"
+  ) %>% 
+  # dplyr::group_by(serotype_final_decision, class) %>%
+  # dplyr::summarise(percent = count/sum(count)*100) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::select(serotype_final_decision,
+                    serotype_classification_PCV13_final_decision) %>% 
+      dplyr::mutate(
+        # slightly change classifications
+        serotype_classification_PCV13_final_decision = case_when(
+          serotype_classification_PCV13_final_decision == "untypeable" ~ " ",
+          TRUE ~ serotype_classification_PCV13_final_decision
+        ),
+        serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                              levels = c("VT", "NVT", " "))
+      )
+    ,
+    by = "serotype_final_decision"
+    ,
+    relationship = "many-to-many"
+  ) %>% 
+  dplyr::distinct() %>% 
+  dplyr::mutate(
+    class = gsub("workWGS_AMR_logic_class_", "", class)
+  ) %>% 
+  # view() %>% 
+  glimpse()
+
+amr2 <- ggplot(amr_ser_long, aes(x = serotype_final_decision,
+                                 y = percent,
+                                 fill = class)) +
+  # geom_line(size = 1.5) +
+  geom_bar(stat = "identity", position = position_stack()) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  facet_grid(~ serotype_classification_PCV13_final_decision,
+             scales = "free_x",
+             space = "free_x"
+  ) +
+  # geom_text(aes(label = paste0(round(percentage, 2), "%")),
+  #           position = position_dodge(width = 0.9),
+  #           vjust = -0.3) +
+  # scale_fill_manual(values = c(col_map)) +
+  labs(x = " ", y = "Percentage", 
+       # title = "All Serotypes"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = "bottom", # c(0.02, 0.75),
+        legend.direction = "horizontal",
+        legend.justification = c("centre", "top"),
+        legend.background = element_rect(fill = NA, color = NA),
+        legend.title = element_blank(),
+        legend.margin = margin(t = -25),
+        legend.spacing.y = unit(-0.3, "cm"))
+
+
+png(file = "pictures/genData_amr_filterPneumo.png", width = 23, height = 25, unit = "cm", res = 600)
+cowplot::plot_grid(amr1, amr2,
+                   nrow = 2,
+                   labels = c("A", "B"))
+dev.off()
+
+
+# test individual GPSC & ST to AMR
+amr_ser_gpsc_st_long <- df_epi_gen_pneumo %>% 
+  dplyr::select(serotype_final_decision,
+                workWGS_gpsc_strain,
+                workWGS_MLST_dc_ST,
+                contains("workWGS_AMR_logic_class"),
+                -workWGS_AMR_logic_class_counts
+  ) %>% 
+  tidyr::pivot_longer(
+    cols = contains("workWGS_AMR_logic_class"),
+    names_to = "class",
+    values_to = "logic"
+  ) %>% 
+  dplyr::group_by(serotype_final_decision, workWGS_gpsc_strain, workWGS_MLST_dc_ST,
+                  class, logic) %>%
+  dplyr::summarise(count = n(),
+                   .groups = "drop") %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::select(serotype_final_decision,
+                    workWGS_gpsc_strain,
+                    workWGS_MLST_dc_ST,
+                    contains("workWGS_AMR_logic_class"),
+                    -workWGS_AMR_logic_class_counts
+      ) %>% 
+      tidyr::pivot_longer(
+        cols = contains("workWGS_AMR_logic_class"),
+        names_to = "class",
+        values_to = "logic"
+      ) %>% 
+      dplyr::group_by(serotype_final_decision, workWGS_gpsc_strain, workWGS_MLST_dc_ST,
+                      class) %>%
+      dplyr::summarise(count_class = n(),
+                       .groups = "drop")
+    ,
+    by = c("serotype_final_decision", "workWGS_gpsc_strain", "workWGS_MLST_dc_ST",
+           "class")
+  ) %>% 
+  dplyr::mutate(
+    percent = count/count_class*100
+  ) %>% 
+  dplyr::filter(
+    logic == "TRUE"
+  ) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::select(serotype_final_decision,
+                    serotype_classification_PCV13_final_decision) %>% 
+      dplyr::mutate(
+        # slightly change classifications
+        serotype_classification_PCV13_final_decision = case_when(
+          serotype_classification_PCV13_final_decision == "untypeable" ~ " ",
+          TRUE ~ serotype_classification_PCV13_final_decision
+        ),
+        serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                              levels = c("VT", "NVT", " "))
+      )
+    ,
+    by = "serotype_final_decision"
+    ,
+    relationship = "many-to-many"
+  ) %>% 
+  dplyr::distinct() %>% 
+  dplyr::mutate(
+    class = gsub("workWGS_AMR_logic_class_", "", class)
+  ) %>% 
+  # view() %>% 
+  glimpse()
+
+# seems like some serotypes have MDR characteristics; will filter out this later
+
+
+# MDR flag
 df_amr_summary <- df_epi_gen_pneumo %>% 
   dplyr::count(workWGS_AMR_MDR_flag, serotype_final_decision) %>%
   dplyr::mutate(percentage = n / sum(n) * 100) %>% 
