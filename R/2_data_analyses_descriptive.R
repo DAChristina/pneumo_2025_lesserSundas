@@ -689,6 +689,70 @@ cowplot::plot_grid(ser1, ser5,
 dev.off()
 
 
+# test GPSCC
+df_serotype_GPSC_summary <- df_epi_gen_pneumo %>% 
+  dplyr::group_by(serotype_final_decision, workWGS_gpsc_strain) %>% 
+  dplyr::summarise(count_gpsc = n()) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::group_by(serotype_final_decision) %>% 
+      dplyr::summarise(count_serotype = n()) %>% 
+      dplyr::ungroup()
+    ,
+    by = "serotype_final_decision"
+  ) %>% 
+  dplyr::mutate(
+    percentage = round(count_gpsc/count_serotype*100, 1)
+  ) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::select(serotype_final_decision,
+                    serotype_classification_PCV13_final_decision) %>% 
+      dplyr::mutate(
+        # slightly change classifications
+        serotype_classification_PCV13_final_decision = case_when(
+          serotype_classification_PCV13_final_decision == "untypeable" ~ " ",
+          TRUE ~ serotype_classification_PCV13_final_decision
+        ),
+        serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                              levels = c("VT", "NVT", " "))
+      )
+    ,
+    by = "serotype_final_decision"
+  ) %>% 
+  dplyr::distinct() %>% 
+  # view() %>%
+  glimpse()
+
+ggplot(df_serotype_GPSC_summary, aes(x = serotype_final_decision,
+                                     y = count_gpsc,
+                                     fill = workWGS_gpsc_strain)) +
+  # geom_line(size = 1.5) +
+  geom_bar(stat = "identity", position = position_stack()) +
+  # scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  facet_grid(~ serotype_classification_PCV13_final_decision,
+             scales = "free_x",
+             space = "free_x"
+  ) +
+  labs(x = " ", y = "Count", 
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.justification = c("centre", "top"),
+        legend.background = element_rect(fill = NA, color = NA),
+        legend.title = element_blank(),
+        legend.margin = margin(t = -25),
+        legend.spacing.y = unit(-0.3, "cm")) +
+  guides(fill = guide_legend(ncol = 20))
+# not worth analysing GPSC unless focused on some serotypes; too diverse!
+
+df_serotype_GPSC_summary %>% 
+  dplyr::filter(serotype_final_decision %in% c("19F", "6A", "23F", "untypeable")) %>% 
+  view()
+
 # focused on inter-species
 df_gen_interSp <- read.csv("inputs/genData_all.csv") %>% 
   dplyr::filter(workWGS_stats_pneumo_cutoff == "> 2.3 Mb") %>% # S. christatus automatically deleted 
@@ -771,31 +835,18 @@ amr_pcv13_long <- df_epi_gen_pneumo %>%
   dplyr::filter(
     logic == "TRUE"
   ) %>% 
-  # dplyr::group_by(serotype_final_decision, class) %>%
-  # dplyr::summarise(percent = count/sum(count)*100) %>% 
-  # dplyr::left_join(
-  #   df_epi_gen_pneumo %>% 
-  #     dplyr::select(serotype_final_decision,
-  #                   serotype_classification_PCV13_final_decision) %>% 
-  #     dplyr::mutate(
-  #       # slightly change classifications
-  #       serotype_classification_PCV13_final_decision = case_when(
-  #         serotype_classification_PCV13_final_decision == "untypeable" ~ " ",
-  #         TRUE ~ serotype_classification_PCV13_final_decision
-  #       ),
-  #       serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
-  #                                                             levels = c("VT", "NVT", " "))
-  #     )
-  #   ,
-  #   by = "serotype_final_decision"
-  #   ,
-  #   relationship = "many-to-many"
-  # ) %>% 
   dplyr::distinct() %>% 
   dplyr::mutate(
     class = gsub("workWGS_AMR_logic_class_", "", class)
   ) %>% 
   # view() %>% 
+  glimpse()
+
+amr_grouped <- amr_pcv13_long %>% 
+  # dplyr::filter(logic == "TRUE") %>% 
+  dplyr::group_by(class, logic) %>% 
+  dplyr::summarise(count = sum(count)) %>% 
+  dplyr::ungroup() %>% 
   glimpse()
 
 amr1 <- ggplot(amr_pcv13_long, aes(x = serotype_classification_PCV13_final_decision,

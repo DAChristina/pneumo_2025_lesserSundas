@@ -226,6 +226,8 @@ write.csv(stdres_PCV15_VT_report,
 
 # 4. AMR_MDR vs. everything ##################################################
 # using serotypes are too slow resulted in multiple crashes.
+# serotype or GPSC vs. AMR or MDR were not done
+# due to very sparsely distributed counts among a large number of groups.
 ptest_matrix_AMR_MDR <- generate_or_chisq_report(df_input = df_epi_gen_pneumo,
                                                  binary_disease = "workWGS_AMR_MDR_flag")
 
