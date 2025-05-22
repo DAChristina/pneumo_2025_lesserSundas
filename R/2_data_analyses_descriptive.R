@@ -763,9 +763,10 @@ df_gen_interSp <- read.csv("inputs/genData_all.csv") %>%
 
 # AMR analyses & viz ###########################################################
 # load df_epi_gen_pneumo first
+# AMR and virulence factors use pass qc samples (n = 314)
 df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pneumo_decision.csv") %>% 
-  # dplyr::filter(workPoppunk_qc == "pass_qc") %>%
-  dplyr::filter(workWGS_species_pw == "Streptococcus pneumoniae") %>% 
+  dplyr::filter(workPoppunk_qc == "pass_qc") %>%
+  # dplyr::filter(workWGS_species_pw == "Streptococcus pneumoniae") %>% 
   dplyr::mutate(
     serotype_final_decision = case_when(
       serotype_final_decision == "mixed serotypes/serogroups" ~ "mixed serogroups",
@@ -1290,7 +1291,90 @@ df_mdr_counts_gpsc_st_long <- df_epi_gen_pneumo %>%
   glimpse()
 
 
+# test heatmap for the most common AMRs in MDR
+filtered_gen_epi_pass_qc <- df_epi_gen_pneumo %>% 
+  dplyr::select(serotype_classification_PCV13_final_decision,
+                serotype_final_decision,
+                workWGS_gpsc_strain,
+                workWGS_MLST_dc_ST,
+                area,
+                workPoppunk_qc,
+                contains(c("AMR_logic", "MDR"))
+  ) %>% 
+  dplyr::mutate(qc_simplified = ifelse(workPoppunk_qc == "pass_qc", "pass", "no")
+  ) %>% 
+  dplyr::filter(qc_simplified == "pass") %>% 
+  glimpse()
 
+filtered_gen_epi_pass_qc_long <- filtered_gen_epi_pass_qc %>%
+  dplyr::filter(workWGS_AMR_MDR_flag == "MDR") %>% 
+  tidyr::pivot_longer(cols = all_of(contains("workWGS_AMR_logic_class_")),
+                      names_to = "class",
+                      values_to = "resistant") %>% 
+  dplyr::filter(class != "workWGS_AMR_logic_class_counts") %>% 
+  glimpse()
+
+heat_data <- filtered_gen_epi_pass_qc_long %>%
+  dplyr::group_by(serotype_classification_PCV13_final_decision, class) %>%
+  dplyr::summarise(resistance_rate = mean(resistant)*100, .groups = "drop") %>% # resistant = proportion of all TRUE
+  dplyr::mutate(
+    class = gsub("workWGS_AMR_logic_class_", "", class)
+  ) %>% 
+  glimpse()
+
+# Plot heatmap
+ggplot(heat_data, aes(x = serotype_classification_PCV13_final_decision, y = class, fill = resistance_rate)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkred", name = "% Resistant") +
+  theme_minimal() +
+  labs(x = " ")
+
+# faceted
+res_summary <- filtered_gen_epi_pass_qc_long %>%
+  group_by(serotype_final_decision, class) %>%
+  summarise(resistance_rate = mean(resistant) * 100, .groups = "drop") %>% 
+  dplyr::mutate(
+    class = gsub("workWGS_AMR_logic_class_", "", class)
+  )
+
+ggplot(res_summary, aes(x = serotype_final_decision, y = 1, fill = resistance_rate)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = paste0(round(resistance_rate, 1), "%"))) +
+  scale_fill_gradient(low = "white", high = "darkred", name = "% Resistant") +
+  facet_wrap(~ class, ncol = 3) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+# test tetra-macro-anti combinations
+test_tetraMacroAnti_pass_qc <- df_epi_gen_pneumo %>% 
+  dplyr::select(serotype_classification_PCV13_final_decision,
+                serotype_final_decision,
+                workWGS_gpsc_strain,
+                workWGS_MLST_dc_ST,
+                area,
+                workPoppunk_qc,
+                contains(c("AMR_logic", "MDR"))
+  ) %>% 
+  dplyr::mutate(qc_simplified = ifelse(workPoppunk_qc == "pass_qc", "pass", "no"),
+                workWGS_AMR_MDR_tetraMacroAnti_counts = rowSums(across(c("workWGS_AMR_logic_class_tetracyclines",
+                                                                         "workWGS_AMR_logic_class_macrolides",
+                                                                         "workWGS_AMR_logic_class_antifolates")
+                )),
+                workWGS_AMR_MDR_tetraMacroAnti_flag = case_when(
+                  workWGS_AMR_MDR_tetraMacroAnti_counts == 3 ~ "TRUE",
+                  workWGS_AMR_MDR_tetraMacroAnti_counts <= 2 ~ "FALSE",
+                  TRUE ~ NA_character_
+                )
+  ) %>% 
+  dplyr::filter(qc_simplified == "pass",
+                workWGS_AMR_MDR_flag == "MDR",
+                workWGS_AMR_MDR_tetraMacroAnti_flag == "TRUE") %>%
+  # dplyr::select(matches("tetra|macro|anti")) %>%
+  # view() %>% 
+  glimpse()
 
 
 

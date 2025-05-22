@@ -226,12 +226,26 @@ write.csv(stdres_PCV15_VT_report,
 
 # 4. AMR_MDR vs. everything ##################################################
 # using serotypes are too slow resulted in multiple crashes.
-# serotype or GPSC vs. AMR or MDR were not done
-# due to very sparsely distributed counts among a large number of groups.
-ptest_matrix_AMR_MDR <- generate_or_chisq_report(df_input = df_epi_gen_pneumo,
-                                                 binary_disease = "workWGS_AMR_MDR_flag")
+# serotype or GPSC vs. AMR were not done due to high variability
 
-ptest_matrix_AMR_MDR_report <- purrr::imap_dfr(ptest_matrix_AMR_MDR, ~{
+# test popPUNK qc vs. AMR flag
+filtered_gen_epi_qc_simplified <- df_epi_gen_pneumo %>% 
+  dplyr::select(serotype_classification_PCV13_final_decision,
+                serotype_final_decision,
+                workWGS_gpsc_strain,
+                workWGS_MLST_dc_ST,
+                area,
+                workPoppunk_qc,
+                contains(c("AMR_logic", "MDR"))
+  ) %>% 
+  dplyr::mutate(qc_simplified = ifelse(workPoppunk_qc == "pass_qc", "pass", "no")
+  ) %>% 
+  glimpse()
+
+ptest_matrix_qc_simplified <- generate_or_chisq_report(df_input = filtered_gen_epi_qc_simplified,
+                                                        binary_disease = "qc_simplified")
+
+ptest_matrix_qc_simplified_report <- purrr::imap_dfr(ptest_matrix_qc_simplified, ~{
   chisq <- .x$chisq_result
   fisher <- .x$fisher_result
   
@@ -261,7 +275,7 @@ ptest_matrix_AMR_MDR_report <- purrr::imap_dfr(ptest_matrix_AMR_MDR, ~{
 }) %>% 
   glimpse()
 
-summary_AMR_MDR_report <- bind_rows(ptest_matrix_AMR_MDR_report$summary) %>% 
+summary_qc_simplified_report <- bind_rows(ptest_matrix_qc_simplified_report$summary) %>% 
   dplyr::mutate(
     significance = case_when(
       fisher_p < 0.05 | chisq_p < 0.05 ~ "occur",
@@ -272,27 +286,108 @@ summary_AMR_MDR_report <- bind_rows(ptest_matrix_AMR_MDR_report$summary) %>%
   dplyr::distinct(variable, .keep_all = T) %>% 
   glimpse()
 
-stdres_AMR_MDR_report <- bind_rows(ptest_matrix_AMR_MDR_report$stdres) %>% 
+stdres_qc_simplified_report <- bind_rows(ptest_matrix_qc_simplified_report$stdres) %>% 
+  dplyr::select(variable, row, col, stdres) %>% 
+  glimpse()
+
+# Statictically significance difference for antifolates and tetracyclines
+# Would rather use filtered samples with pass qc for AMR & virulence factor analysis
+
+# test filtered data, PCV13 groups vs. AMR flag
+filtered_gen_epi_pass_qc <- df_epi_gen_pneumo %>% 
+  dplyr::select(serotype_classification_PCV13_final_decision,
+                serotype_final_decision,
+                workWGS_gpsc_strain,
+                workWGS_MLST_dc_ST,
+                area,
+                workPoppunk_qc,
+                contains(c("AMR_logic", "MDR"))
+  ) %>% 
+  dplyr::mutate(qc_simplified = ifelse(workPoppunk_qc == "pass_qc", "pass", "no")
+  ) %>% 
+  dplyr::filter(qc_simplified == "pass") %>% 
+  glimpse()
+
+ptest_matrix_AMR_simplified <- generate_or_chisq_report(df_input = filtered_gen_epi_pass_qc,
+                                                        binary_disease = "serotype_classification_PCV13_final_decision")
+
+ptest_matrix_AMR_simplified_report <- purrr::imap_dfr(ptest_matrix_AMR_simplified, ~{
+  chisq <- .x$chisq_result
+  fisher <- .x$fisher_result
+  
+  # extract stdres
+  stdres_tbl <- NULL
+  if (!is.null(chisq$stdres)) {
+    stdres_tbl <- as.data.frame(as.table(chisq$stdres)) %>%
+      rename(row = Var1, col = Var2, stdres = Freq) %>%
+      mutate(variable = .y)
+  }
+  
+  summary_tbl <- tidyr::tibble(
+    variable = .y,
+    chisq_stat = chisq$statistic %||% NA,
+    chisq_df = chisq$parameter %||% NA,
+    chisq_p = chisq$p.value %||% NA,
+    chisq_method = chisq$method %||% NA_character_,
+    
+    fisher_or = fisher$estimate %||% NA,
+    fisher_or_lo = fisher$conf.int[[1]] %||% NA,
+    fisher_or_hi = fisher$conf.int[[2]] %||% NA,
+    fisher_p = fisher$p.value %||% NA,
+    fisher_method = fisher$method %||% NA_character_
+  )
+  
+  list(summary = summary_tbl, stdres = stdres_tbl)
+}) %>% 
+  glimpse()
+
+summary_AMR_simplified_report <- bind_rows(ptest_matrix_AMR_simplified_report$summary) %>% 
+  dplyr::mutate(
+    significance = case_when(
+      fisher_p < 0.05 | chisq_p < 0.05 ~ "occur",
+      !is.na(fisher_p) & !is.na(chisq_p) ~ "no",
+      TRUE ~ NA_character_
+    )
+  ) %>% 
+  dplyr::distinct(variable, .keep_all = T) %>% 
+  glimpse()
+
+stdres_AMR_simplified_report <- bind_rows(ptest_matrix_AMR_simplified_report$stdres) %>% 
   dplyr::select(variable, row, col, stdres) %>% 
   glimpse()
 
 # note: DO NOT join summary & stdres; resulted in a superhuge df with >> 2M rows
-write.csv(summary_AMR_MDR_report,
-          "outputs/epi_genomes_AMR_MDR_vs_everything_chisq_pValues.csv",
+write.csv(summary_AMR_simplified_report,
+          "outputs/epi_genomes_seroGroups_filtered_vs_AMR_chisq_pValues.csv",
           row.names = F)
-write.csv(stdres_AMR_MDR_report,
-          "outputs/epi_genomes_AMR_MDR_vs_everything_chisq_pValues_postHoc.csv",
+write.csv(stdres_AMR_simplified_report,
+          "outputs/epi_genomes_seroGroups_filtered_vs_AMR_chisq_pValues_postHoc.csv",
           row.names = F)
 
 
-stdres_AMR_MDR_report %>% 
-  dplyr::filter(
-    # str_detect(variable, "serotype|GPSC|MLST"),
-    variable %in% c(
-      "serotype_final_decision",
-      "workWGS_MLST_dc_ST",
-      "workWGS_MLST_pw_ST"
-    ),
-    stdres >= 2 | stdres <= -2
-    ) %>% 
-  view()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
