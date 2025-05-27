@@ -45,10 +45,23 @@ table(df_epi_gen_pneumo$area)
 # test area vs. vaccine types groupings
 test <- chisq.test(df_epi_gen_pneumo$area, df_epi_gen_pneumo$serotype_classification_PCV13_final_decision)
 test$observed
-test$stdres # post-hoc, usually find thosee with stdRes > |2|
+test$stdres # post-hoc, usually find those with stdRes > |2|
 test
 
 # I suspect for statistically significant difference occurs among areas
+test_ageG <- fisher.test(df_epi_gen_pneumo$serotype_classification_PCV13_final_decision,
+                         df_epi_gen_pneumo$age_year_3groups, workspace = 2e7)
+# test_postHoc <- rstatix::pairwise_fisher_test(table(df_epi_gen_pneumo$serotype_classification_PCV13_final_decision,
+#                                                     df_epi_gen_pneumo$age_year_3groups),
+#                                               p.adjust.method = "bonferroni")
+# test_postHoc
+
+test_vacc <- chisq.test(df_epi_gen_pneumo$serotype_classification_PCV13_final_decision,
+                        df_epi_gen_pneumo$vaccination_pcv13_dc_n_regroup)
+test_vacc$observed
+chisq.posthoc.test::chisq.posthoc.test(test_vacc$observed, method = "bonferroni")
+# for (j in 1:3) print(chisq.test(test_vacc$observed[, -j])) # p MUST be corrected
+
 
 # 1. Area vs. everything ########################################################
 ptest_matrix_area <- generate_or_chisq_report(df_input = df_epi_gen_pneumo,

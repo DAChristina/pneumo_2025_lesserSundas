@@ -76,12 +76,69 @@ df_joined <- fuzzyjoin::regex_left_join(
     by = c("Strains" = "workFasta_name")
   ) %>% 
   dplyr::mutate(
-    gene_priority = ifelse(str_detect(gene.x, "pspA|pspC|cbpA|pavA|pcpA|ply|lytA"), "priority", "no") # pcpA not detected
+    gene_priority = ifelse(str_detect(gene.x, "pspA|pspC|cbpA|pavA|pcpA|ply|lytA"), "priority", "no"), # pcpA not detected
+    gene_present_absent = ifelse(aa_percent == 0, FALSE, TRUE)
   ) %>% 
   dplyr::filter(gene_priority == "priority",
                 workPoppunk_qc == "pass_qc") %>% 
   # view() %>% 
   glimpse()
+
+# long
+df_joined_long <- df_joined %>% 
+  dplyr::mutate(
+    gene.x = case_when(
+     gene.x == "cbpA/pspC" ~ "cbpA.pspC",
+     TRUE ~ gene.x
+    ),
+    gene_class = case_when(
+      gene_class == "Immune modulation" ~ "Immune.modulation",
+      TRUE ~ gene_class
+    )
+  ) %>% 
+  tidyr::pivot_wider(
+    id_cols = c("serotype_classification_PCV13_final_decision",
+                "serotype_final_decision",
+                "workWGS_gpsc_strain",
+                "workWGS_MLST_dc_ST",
+                "area",
+                "Strains"),
+    names_from = c("gene.x", "gene_class"),
+    # names_glue = gene_class,
+    values_from = c("gene_present_absent", "aa_percent")
+  ) %>% 
+  dplyr::mutate(
+    gene_present_absent_lytA_Exoenzyme = case_when(
+      gene_present_absent_lytA_Exoenzyme ~ "Exoenzyme lytA exist",
+      TRUE ~ "NF"
+    ),
+    gene_present_absent_lytA_Exoenzyme = factor(gene_present_absent_lytA_Exoenzyme, levels = c("NF", "Exoenzyme lytA exist")),
+    gene_present_absent_ply_Exotoxin = case_when(
+      gene_present_absent_ply_Exotoxin ~ "Exotoxin ply exist",
+      TRUE ~ "NF"
+    ),
+    gene_present_absent_ply_Exotoxin = factor(gene_present_absent_ply_Exotoxin, levels = c("NF", "Exotoxin ply exist")),
+    gene_present_absent_pavA_Adherence = case_when(
+      gene_present_absent_pavA_Adherence ~ "Adherence factor pavA exist",
+      TRUE ~ "NF"
+    ),
+    gene_present_absent_pavA_Adherence = factor(gene_present_absent_pavA_Adherence, levels = c("NF", "Adherence factor pavA exist")),
+    gene_present_absent_pspA_Immune.modulation = case_when(
+      gene_present_absent_pspA_Immune.modulation ~ "Immune modulation pspA exist",
+      TRUE ~ "NF"
+    ),
+    gene_present_absent_pspA_Immune.modulation = factor(gene_present_absent_pspA_Immune.modulation, levels = c("NF", "Immune modulation pspA exist")),
+    gene_present_absent_cbpA.pspC_Adherence = case_when(
+      gene_present_absent_cbpA.pspC_Adherence ~ "Adherence factor cbpA/pspC exist",
+      TRUE ~ "NF"
+    ),
+    gene_present_absent_cbpA.pspC_Adherence = factor(gene_present_absent_cbpA.pspC_Adherence, levels = c("NF", "Adherence factor cbpA/pspC exist"))
+  ) %>% 
+  glimpse()
+
+write.csv(df_joined_long, "inputs/genData_pneumo_panvita_long.csv")
+
+
 
 # test visualisation
 # faceted by gene
