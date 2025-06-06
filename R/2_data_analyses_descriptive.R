@@ -825,8 +825,50 @@ cowplot::plot_grid(ser1, ser5,
                    labels = c("A", "B", "C", "D"))
 dev.off()
 
+# test all serotype per-ageGroup
+test_serotype_per_ageG <- df_epi_gen_pneumo %>% 
+  # dplyr::filter(serotype_classification_PCV13_final_decision == "NVT") %>% 
+  dplyr::group_by(serotype_final_decision, age_year_3groups) %>% 
+  dplyr::summarise(count_serotype = n()) %>% 
+  ungroup() %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      # dplyr::filter(serotype_classification_PCV13_final_decision == "NVT") %>% 
+      dplyr::group_by(age_year_3groups) %>% 
+      dplyr::summarise(count_ageG = n()) %>% 
+      ungroup()
+    ,
+    by = "age_year_3groups"
+  ) %>% 
+  dplyr::mutate(
+    percentage = round(count_serotype/count_ageG*100, 1)
+  ) %>% 
+  # view() %>% 
+  glimpse()
 
-# test GPSCC
+test_serotype_per_vaccination <- df_epi_gen_pneumo %>% 
+  # dplyr::filter(vaccination_pcv13_dc_n_regroup == "1-2 mandatory") %>% 
+  dplyr::group_by(serotype_final_decision, vaccination_pcv13_dc_n_regroup) %>% 
+  dplyr::summarise(count_serotype = n()) %>% 
+  ungroup() %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      # dplyr::filter(vaccination_pcv13_dc_n_regroup == "1-2 mandatory") %>% 
+      dplyr::group_by(vaccination_pcv13_dc_n_regroup) %>% 
+      dplyr::summarise(count_PCV13 = n()) %>% 
+      ungroup()
+    ,
+    by = "vaccination_pcv13_dc_n_regroup"
+  ) %>% 
+  dplyr::mutate(
+    percentage = round(count_serotype/count_PCV13*100, 1)
+  ) %>% 
+  # filter(vaccination_pcv13_dc_n_regroup == "1-2 mandatory") %>% 
+  # view() %>% 
+  glimpse()
+
+
+# test GPSCC per serotype
 df_serotype_GPSC_summary <- df_epi_gen_pneumo %>% 
   dplyr::group_by(serotype_final_decision, workWGS_gpsc_strain) %>% 
   dplyr::summarise(count_gpsc = n()) %>% 
@@ -888,7 +930,74 @@ ggplot(df_serotype_GPSC_summary, aes(x = serotype_final_decision,
 
 df_serotype_GPSC_summary %>% 
   dplyr::filter(serotype_final_decision %in% c("19F", "6A", "23F", "untypeable")) %>% 
-  view()
+  # view() %>% 
+  glimpse()
+
+gpsc_percent <- df_epi_gen_pneumo %>% 
+  dplyr::group_by(workWGS_gpsc_strain) %>% 
+  dplyr::count(workWGS_gpsc_strain) %>%
+  dplyr::mutate(percentage = n / nrow(df_epi_gen_pneumo) * 100,
+                flag = case_when(
+                  percentage <= 1 ~ "minor",
+                  workWGS_gpsc_strain == "Not assigned" ~ "not assigned",
+                  T ~ "major")) %>% 
+  view() %>% 
+  glimpse()
+
+# test serotype per GPSC
+df_GPSC_serotype_summary <- df_epi_gen_pneumo %>% 
+  dplyr::group_by(serotype_final_decision, workWGS_gpsc_strain) %>% 
+  dplyr::summarise(count_serotype = n()) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::group_by(workWGS_gpsc_strain) %>% 
+      dplyr::summarise(count_gpsc = n()) %>% 
+      dplyr::ungroup()
+    ,
+    by = "workWGS_gpsc_strain"
+  ) %>% 
+  dplyr::mutate(
+    percentage = round(count_serotype/count_gpsc*100, 1)
+  ) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      dplyr::select(serotype_final_decision,
+                    serotype_classification_PCV13_final_decision) %>% 
+      dplyr::mutate(
+        # slightly change classifications
+        serotype_classification_PCV13_final_decision = case_when(
+          serotype_classification_PCV13_final_decision == "untypeable" ~ " ",
+          TRUE ~ serotype_classification_PCV13_final_decision
+        ),
+        serotype_classification_PCV13_final_decision = factor(serotype_classification_PCV13_final_decision,
+                                                              levels = c("VT", "NVT", " "))
+      )
+    ,
+    by = "serotype_final_decision"
+  ) %>% 
+  dplyr::left_join(
+    gpsc_percent %>% 
+      dplyr::select(workWGS_gpsc_strain, flag)
+    ,
+    by = "workWGS_gpsc_strain"
+  ) %>% 
+  dplyr::distinct() %>% 
+  view() %>%
+  glimpse()
+
+df_epi_gen_pneumo %>%
+  dplyr::filter(serotype_classification_PCV13_final_decision == "VT",
+                # flag == "major",
+                workWGS_gpsc_strain == "11" |
+                  workWGS_gpsc_strain == "14" |
+                  workWGS_gpsc_strain == "13" |
+                  workWGS_gpsc_strain == "5"
+                ) %>% 
+  dplyr::group_by(workWGS_gpsc_strain) %>% 
+  dplyr::summarise(count = n()) %>% 
+  view() %>% 
+  glimpse()
 
 # GPSC analysis per-serotype ###################################################
 # (tobecontinued)
@@ -1397,6 +1506,55 @@ df_amr_counts_gpsc_st_long <- df_epi_gen_pneumo %>%
   # view() %>%
   glimpse()
 
+test_sero_GPSC_ST_vs_AMR_counts <- df_epi_gen_pneumo %>% 
+  dplyr::select(
+    serotype_classification_PCV13_final_decision,
+    serotype_final_decision,
+    workWGS_gpsc_strain,
+    workWGS_MLST_pw_ST,
+    workWGS_MLST_dc_ST,
+    # workWGS_AMR_logic_class_counts,
+    # workWGS_AMR_MDR_flag,
+    contains("AMR")
+  ) %>% 
+  # preliminary filter for serotype-GPSC-ST-specific strain vs. AMR counts
+  dplyr::filter(
+    workWGS_AMR_logic_class_counts == 3,
+    workWGS_AMR_logic_class_macrolides == TRUE,
+    workWGS_AMR_logic_class_tetracyclines == TRUE,
+    workWGS_AMR_logic_class_antifolates == TRUE,
+  ) %>% 
+  dplyr::group_by(
+    workWGS_gpsc_strain,
+    workWGS_MLST_dc_ST,
+    workWGS_AMR_logic_class_counts,
+  ) %>% 
+  dplyr::summarise(count = n()) %>% 
+  dplyr::left_join(
+    df_epi_gen_pneumo %>% 
+      # preliminary filter for serotype-GPSC-ST-specific strain vs. AMR counts
+      dplyr::filter(
+        workWGS_AMR_logic_class_counts == 3,
+        workWGS_AMR_logic_class_macrolides == TRUE,
+        workWGS_AMR_logic_class_tetracyclines == TRUE,
+        workWGS_AMR_logic_class_antifolates == TRUE,
+      ) %>% 
+      dplyr::group_by(
+        # workWGS_MLST_dc_ST,
+        workWGS_AMR_logic_class_counts,
+      ) %>% 
+      dplyr::summarise(count_amr_count = n()),
+    by = "workWGS_AMR_logic_class_counts"
+  ) %>% 
+  dplyr::mutate(percentage = round(count/count_amr_count*100, 1)
+  ) %>% 
+  dplyr::filter(
+    # workWGS_AMR_MDR_flag == "MDR",
+    workWGS_AMR_logic_class_counts == 3
+  ) %>%
+  dplyr::distinct() %>% 
+  view() %>%
+  glimpse()
 
 # MDR flag
 df_amr_mdr_summary <- df_epi_gen_pneumo %>% 

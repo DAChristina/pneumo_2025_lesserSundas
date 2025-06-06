@@ -35,6 +35,16 @@ df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pne
                                                    "37F", "38", "39",
                                                    "untypeable")
                                                  ),
+                gpsc_dominant_filter = case_when(
+                  workWGS_gpsc_strain == "Not assigned" ~ "Not assigned",
+                  workWGS_gpsc_strain == "11" ~ "11",
+                  workWGS_gpsc_strain == "14" ~ "14",
+                  workWGS_gpsc_strain == "5" ~ "5",
+                  workWGS_gpsc_strain == "13" ~ "13",
+                  workWGS_gpsc_strain == "642" ~ "642",
+                  workWGS_gpsc_strain == "45" ~ "45",
+                  TRUE ~ NA_character_
+                ),
                 # annoying factor setup
                 n_child_1to2yo = factor(n_child_1to2yo,
                                         levels = c("0", "1", "2")),
@@ -132,16 +142,32 @@ df_epi_gen_pneumo <- read.csv("inputs/genData_pneumo_with_epiData_with_final_pne
                                               levels = c("non-MDR", "MDR")),
                 
                 # more annoying factor adjustment
-                gene_present_absent_lytA_Exoenzyme = factor(gene_present_absent_lytA_Exoenzyme, levels = c("NF", "Exoenzyme lytA exist")),
-                gene_present_absent_ply_Exotoxin = factor(gene_present_absent_ply_Exotoxin, levels = c("NF", "Exotoxin ply exist")),
-                gene_present_absent_pavA_Adherence = factor(gene_present_absent_pavA_Adherence, levels = c("NF", "Adherence factor pavA exist")),
-                gene_present_absent_pspA_Immune.modulation = factor(gene_present_absent_pspA_Immune.modulation, levels = c("NF", "Immune modulation pspA exist")),
-                gene_present_absent_cbpA.pspC_Adherence = factor(gene_present_absent_cbpA.pspC_Adherence, levels = c("NF", "Adherence factor cbpA/pspC exist"))
-                )
+                gene_present_absent_lytA_Exoenzyme = factor(gene_present_absent_lytA_Exoenzyme, levels = c("NF", "lytA")),
+                gene_present_absent_ply_Exotoxin = factor(gene_present_absent_ply_Exotoxin, levels = c("NF", "ply")),
+                gene_present_absent_pavA_Adherence = factor(gene_present_absent_pavA_Adherence, levels = c("NF", "pavA")),
+                gene_present_absent_pspA_Immune.modulation = factor(gene_present_absent_pspA_Immune.modulation, levels = c("NF", "pspA")),
+                gene_present_absent_cbpA.pspC_Adherence = factor(gene_present_absent_cbpA.pspC_Adherence, levels = c("NF", "cbpA/pspC"))
+                ) %>% 
+  # test label shuffling
+  dplyr::arrange(
+    # serotype_classification_PCV13_final_decision,
+    # workWGS_gpsc_strain,
+    label
+  )
 tre_pp <- ape::read.tree("raw_data/result_poppunk/rapidnj_no_GPSC/rapidnj_no_GPSC_core_NJ.tree")
 tre_pp$tip.label <- gsub("^Streptococcus_pneumoniae_", "", tre_pp$tip.label)
 tre_raxml <- ape::read.tree("raw_data/result_raxml_from_panaroo/RAxML_bestTree.1_output_tree")
 tre_raxml$tip.label <- gsub("^Streptococcus_pneumoniae_", "", tre_raxml$tip.label)
+
+# focused on raxml tree: rearrange label coz' ggtree link label to row_names
+df_epi_gen_pneumo <- 
+  dplyr::left_join(
+    data.frame(tre_raxml$tip.label),
+    df_epi_gen_pneumo,
+    by = c("tre_raxml.tip.label" = "label")
+  )
+
+rownames(df_epi_gen_pneumo) <- tre_raxml$tip.label
 
 # test node
 ggtree(tre_raxml) + 
@@ -149,10 +175,10 @@ ggtree(tre_raxml) +
   geom_label2(aes(subset=!isTip, label=node), size=2, color="darkred", alpha=0.5)
 
 # analyse weird subtree:
-subtree <- ape::extract.clade(tre_raxml, node = 363)
+subtree <- ape::extract.clade(tre_raxml, node = 571)
 ggtree(subtree) + 
   geom_tiplab(size = 2) +
-  geom_label2(aes(subset=!isTip, label=node), size=2, color="darkred", alpha=0.5)
+  geom_label2(aes(subset=!isTip, label=node), size=3, color="darkred", alpha=0.5)
 subtree$tip.label
 
 # basic
@@ -170,7 +196,7 @@ show_pp <- ggtree(tre_pp,
     legend.spacing.y = unit(0.02, "cm")
   ) +
   geom_hilight(node=367, fill="pink", alpha=0.5)
-show_pp
+# show_pp
 
 show_raxml <- ggtree(tre_raxml,
                   layout = "fan",
@@ -185,8 +211,55 @@ show_raxml <- ggtree(tre_raxml,
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   ) +
-  geom_hilight(node=367, fill="pink", alpha=0.5)
-show_raxml
+  # geom_tiplab(size = 2) +
+  # geom_label2(aes(subset=!isTip, label=node), size=3, color="darkred", alpha=0.5) +
+  geom_hilight(node=375, fill="deepskyblue3", alpha=0.5) + # Not assigned
+  geom_cladelabel(node=375, colour="grey10",
+                  barsize = 0.01,
+                  label = "NA",
+                  offset.text = 0.02,
+                  # angle = 80,
+                  align = F) +
+  geom_hilight(node=397, fill="skyblue2", alpha=0.5) + # GPSC11, NVT
+  geom_cladelabel(node=397, colour="grey10",
+                  barsize = 0.01,
+                  label = "GPSC11",
+                  offset.text = 0.008,
+                  angle = -30,
+                  align = F) +
+  geom_hilight(node=589, fill="indianred3", alpha=0.5) + # GPSC14, VT (23F)
+  geom_cladelabel(node=589, colour="grey10",
+                  barsize = 0.01,
+                  label = "GPSC14",
+                  offset.text = 0.008,
+                  # angle = -30,
+                  align = F) +
+  geom_hilight(node=619, fill="indianred3", alpha=0.5) + # GPSC5, VT (19F)
+  geom_cladelabel(node=619, colour="grey10", # up 1 layer to 611
+                  barsize = 0.01,
+                  label = "GPSC5",
+                  offset.text = 0.001,
+                  align = F) +
+  geom_hilight(node=505, fill="indianred3", alpha=0.5) + # GPSC13, VT (6A)
+  geom_cladelabel(node=500, colour="grey10",
+                  barsize = 0.01,
+                  label = "GPSC13",
+                  offset.text = 0.008,
+                  angle = 50,
+                  align = F)
+  # geom_hilight(node=478, fill="pink", alpha=0.5) + # GPSC642
+  # geom_cladelabel(node=478, colour="grey10",
+  #                 barsize = 0.01,
+  #                 label = "GPSC642",
+  #                 offset.text = 0.001,
+  #                 align = F) +
+  # geom_hilight(node=577, fill="pink", alpha=0.5) + # GPSC45
+  # geom_cladelabel(node=577, colour="grey10",
+  #                 barsize = 0.01,
+  #                 label = "GPSC45",
+  #                 offset.text = 0.01,
+  #                 align = F)
+# show_raxml
 
 # gen tree #####################################################################
 tree_gen_raxml <- show_raxml %<+%
@@ -227,31 +300,31 @@ tree_gen_raxml <- show_raxml %<+%
                          ncol = 5, order = 2)
   ) +
   theme(
-    legend.title=element_text(size=12), 
+    legend.title=element_text(size=12),
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   ) +
   # GPSC
-  ggnewscale::new_scale_fill() +
-  ggtreeExtra::geom_fruit(
-    geom=geom_tile,
-    mapping=aes(fill=df_epi_gen_pneumo$workWGS_gpsc_strain),
-    width=0.02,
-    offset=0.1
-  ) +
-  scale_fill_viridis_d(
-    name = "GPSC",
-    option = "C",
-    direction = -1,
-    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
-                         ncol = 5, order = 3)
-  ) +
-  theme(
-    legend.title=element_text(size=12), 
-    legend.text=element_text(size=9),
-    legend.spacing.y = unit(0.02, "cm")
-  ) +
-  # age groups
+  # ggnewscale::new_scale_fill() +
+  # ggtreeExtra::geom_fruit(
+  #   geom=geom_tile,
+  #   mapping=aes(fill=df_epi_gen_pneumo$gpsc_dominant_filter),
+  #   width=0.02,
+  #   offset=0.1
+  # ) +
+  # scale_fill_viridis_d(
+  #   name = "GPSC",
+  #   option = "C",
+  #   direction = -1,
+  #   guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+  #                        ncol = 5, order = 3)
+  # ) +
+  # theme(
+  #   legend.title=element_text(size=12),
+  #   legend.text=element_text(size=9),
+  #   legend.spacing.y = unit(0.02, "cm")
+  # ) 
+  # # age groups
   ggnewscale::new_scale_fill() +
   ggtreeExtra::geom_fruit(
     geom=geom_tile,
@@ -267,7 +340,7 @@ tree_gen_raxml <- show_raxml %<+%
                        ncol = 3, order = 4)
   ) +
   theme(
-    legend.title=element_text(size=12), 
+    legend.title=element_text(size=12),
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   ) +
@@ -287,7 +360,7 @@ tree_gen_raxml <- show_raxml %<+%
                        ncol = 2, order = 5)
   ) +
   theme(
-    legend.title=element_text(size=12), 
+    legend.title=element_text(size=12),
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   ) +
@@ -308,7 +381,7 @@ tree_gen_raxml <- show_raxml %<+%
                        ncol = 2, order = 6)
   ) +
   theme(
-    legend.title=element_text(size=12), 
+    legend.title=element_text(size=12),
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   ) +
@@ -329,7 +402,7 @@ tree_gen_raxml <- show_raxml %<+%
                        ncol = 2, order = 7)
   ) +
   theme(
-    legend.title=element_text(size=12), 
+    legend.title=element_text(size=12),
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   ) +
@@ -350,7 +423,7 @@ tree_gen_raxml <- show_raxml %<+%
                        ncol = 2, order = 8)
   ) +
   theme(
-    legend.title=element_text(size=12), 
+    legend.title=element_text(size=12),
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   )
@@ -378,6 +451,26 @@ tree_amr_raxml <- show_raxml %<+%
   ) +
   theme(
     legend.title=element_text(size=12), 
+    legend.text=element_text(size=9),
+    legend.spacing.y = unit(0.02, "cm")
+  ) +
+  # serotype
+  ggnewscale::new_scale_fill() +
+  ggtreeExtra::geom_fruit(
+    geom=geom_tile,
+    mapping=aes(fill=df_epi_gen_pneumo$serotype_final_decision),
+    width=0.02,
+    offset=0.1
+  ) +
+  scale_fill_viridis_d(
+    name = "Serotype",
+    option = "C",
+    direction = -1,
+    guide = guide_legend(keywidth = 0.3, keyheight = 0.3,
+                         ncol = 5, order = 2)
+  ) +
+  theme(
+    legend.title=element_text(size=12),
     legend.text=element_text(size=9),
     legend.spacing.y = unit(0.02, "cm")
   ) +
@@ -689,7 +782,38 @@ tree_amr_raxml <- show_raxml %<+%
   )
 tree_amr_raxml
 
+filtered_df <- df_epi_gen_pneumo %>% 
+  dplyr::select(
+    # serotype_classification_PCV13_final_decision,
+    # serotype_final_decision,
+    contains("workWGS_AMR_logic_class_"),
+    -workWGS_AMR_logic_class_counts,
+    workWGS_AMR_MDR_flag,
+    # contains("gene_present_absent_")
+  ) %>% 
+  dplyr::mutate(
+    workWGS_AMR_MDR_flag = ifelse(workWGS_AMR_MDR_flag == "non-MDR", "NF", "MDR"),
+    workWGS_AMR_MDR_flag = factor(workWGS_AMR_MDR_flag,
+                                  levels = c("NF", "MDR"))
+  ) %>% 
+  dplyr::rename_with(
+    ~ sub("workWGS_AMR_logic_class_|workWGS_AMR_|gene_present_absent_", "", .)
+  ) %>% 
+  glimpse()
 
+all_labels <- unique(unlist(filtered_df))
+manual <- c("NF" = "palegoldenrod")
+others <- setdiff(all_labels, names(manual))
+
+auto_col <- scales::hue_pal()(length(others))
+names(auto_col) <- others
+
+final_col <- c(manual, auto_col)
+
+ggtree::gheatmap(show_raxml, filtered_df,
+                 offset=0.001, width=1, font.size=3, 
+                 colnames_angle=-90, hjust=0) +
+  scale_fill_manual(values = final_colors)
 
 
 

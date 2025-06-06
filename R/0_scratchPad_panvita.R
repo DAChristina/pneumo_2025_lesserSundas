@@ -109,30 +109,30 @@ df_joined_long <- df_joined %>%
   ) %>% 
   dplyr::mutate(
     gene_present_absent_lytA_Exoenzyme = case_when(
-      gene_present_absent_lytA_Exoenzyme ~ "Exoenzyme lytA exist",
+      gene_present_absent_lytA_Exoenzyme ~ "lytA",
       TRUE ~ "NF"
     ),
-    gene_present_absent_lytA_Exoenzyme = factor(gene_present_absent_lytA_Exoenzyme, levels = c("NF", "Exoenzyme lytA exist")),
+    gene_present_absent_lytA_Exoenzyme = factor(gene_present_absent_lytA_Exoenzyme, levels = c("NF", "lytA")),
     gene_present_absent_ply_Exotoxin = case_when(
-      gene_present_absent_ply_Exotoxin ~ "Exotoxin ply exist",
+      gene_present_absent_ply_Exotoxin ~ "ply",
       TRUE ~ "NF"
     ),
-    gene_present_absent_ply_Exotoxin = factor(gene_present_absent_ply_Exotoxin, levels = c("NF", "Exotoxin ply exist")),
+    gene_present_absent_ply_Exotoxin = factor(gene_present_absent_ply_Exotoxin, levels = c("NF", "ply")),
     gene_present_absent_pavA_Adherence = case_when(
-      gene_present_absent_pavA_Adherence ~ "Adherence factor pavA exist",
+      gene_present_absent_pavA_Adherence ~ "pavA",
       TRUE ~ "NF"
     ),
-    gene_present_absent_pavA_Adherence = factor(gene_present_absent_pavA_Adherence, levels = c("NF", "Adherence factor pavA exist")),
+    gene_present_absent_pavA_Adherence = factor(gene_present_absent_pavA_Adherence, levels = c("NF", "pavA")),
     gene_present_absent_pspA_Immune.modulation = case_when(
-      gene_present_absent_pspA_Immune.modulation ~ "Immune modulation pspA exist",
+      gene_present_absent_pspA_Immune.modulation ~ "pspA",
       TRUE ~ "NF"
     ),
-    gene_present_absent_pspA_Immune.modulation = factor(gene_present_absent_pspA_Immune.modulation, levels = c("NF", "Immune modulation pspA exist")),
+    gene_present_absent_pspA_Immune.modulation = factor(gene_present_absent_pspA_Immune.modulation, levels = c("NF", "pspA")),
     gene_present_absent_cbpA.pspC_Adherence = case_when(
-      gene_present_absent_cbpA.pspC_Adherence ~ "Adherence factor cbpA/pspC exist",
+      gene_present_absent_cbpA.pspC_Adherence ~ "cbpA/pspC",
       TRUE ~ "NF"
     ),
-    gene_present_absent_cbpA.pspC_Adherence = factor(gene_present_absent_cbpA.pspC_Adherence, levels = c("NF", "Adherence factor cbpA/pspC exist"))
+    gene_present_absent_cbpA.pspC_Adherence = factor(gene_present_absent_cbpA.pspC_Adherence, levels = c("NF", "cbpA/pspC"))
   ) %>% 
   glimpse()
 

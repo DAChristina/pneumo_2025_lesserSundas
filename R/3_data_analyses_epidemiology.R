@@ -119,6 +119,12 @@ df_epi <- read.csv("inputs/epiData_with_final_pneumo_decision.csv") %>%
 #                 ) %>% 
 #   glimpse()
 
+
+# test carriage vs. age
+test <- chisq.test(table(df_epi$final_pneumo_decision,
+                         df_epi$age_year_3groups))
+
+# all matrix calculation
 df_epi_chars <- df_epi
 column_names <- setdiff(names(df_epi_chars), "final_pneumo_decision")
 
