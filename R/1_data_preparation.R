@@ -1,7 +1,7 @@
 library(tidyverse)
 
 # Data cleaning process for epiData ############################################
-df_epi_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver4.xlsx",
+df_epi_lombok <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver5.xlsx",
                                  sheet = "Lombok") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub(" ", "_", SPECIMEN_ID),
@@ -27,7 +27,7 @@ df_epi_lombok_duplicated_ids <- df_epi_lombok %>%
 write.csv(df_epi_lombok, "raw_data/temporary_df_epi_lombok.csv",
           row.names = F)
 
-df_epi_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver4.xlsx",
+df_epi_sumbawa <- readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver5.xlsx",
                                     sheet = "Sumbawa") %>% 
   dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
   dplyr::mutate(SPECIMEN_ID = gsub("-", "_", SPECIMEN_ID),
@@ -483,7 +483,7 @@ write.csv(df_epi_coded, "inputs/epiData.csv", row.names = F)
 # Generate available fasta list first!
 
 df_workLab <- dplyr::bind_rows(
-  readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver4.xlsx",
+  readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver5.xlsx",
                      sheet = "Lombok") %>% 
     dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
     dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
@@ -493,7 +493,7 @@ df_workLab <- dplyr::bind_rows(
                   across(where(is.character), ~ if_else(. == "-", "tidak", .))) %>% 
     dplyr::select(2:13, area)
   ,
-  readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver4.xlsx",
+  readxl::read_excel("raw_data/DATABASE PENELITIAN PNEUMOKOKUS (Manado, Lombok, Sorong, Sumbawa)_ver5.xlsx",
                      sheet = "Sumbawa") %>% 
     dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
     dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
@@ -575,7 +575,7 @@ df_gen_all <- dplyr::left_join(
     dplyr::mutate(workFasta_name = gsub("\\.fasta$", "", workFasta_name_with_extension))
   ,  
   # I manually edit 49 naming inconsistencies and analyse LBK_137 from contigs
-  readxl::read_excel("raw_data/Data WGS_Lombok_ver4.xlsx") %>% 
+  readxl::read_excel("raw_data/Data WGS_Lombok_ver5.xlsx") %>% 
     dplyr::rename_all(~stringr::str_replace_all(., " ", "_")) %>% 
     dplyr::rename_with(~ tolower(gsub("[^[:alnum:]_]", "", .x))) %>% 
     dplyr::rename_all(~ paste0("workWGS_", .)) %>% 

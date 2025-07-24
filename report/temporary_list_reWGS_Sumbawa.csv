@@ -1,0 +1,43 @@
+"specimen_id","processing_status","processing_date_culture","workLab_culture_suspect","workLab_optochin","workLab_culture_result","workLab_culture_notes","wgs_shipment_date","workWGS_success_failed","area","workLab_culture_result_final","workFasta_file_check","workFasta_name_with_extension","workWGS_species_pw","workPoppunk_qc"
+"SWQ_295","swq_295","45350.0","yes","s","pos","green colony","ready for shipment (at mrin)",NA,"sumbawa","pos",NA,NA,NA,NA
+"SWQ_348","swq_348","45371.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_349","swq_349","45371.0","yes","s","pos","green colony","ready for shipment (at mrin)","severely degraded","sumbawa","pos",NA,NA,NA,NA
+"SWQ_350","swq_350","45371.0","yes","s","pos","green colony","ready for shipment (at mrin)","severely degraded","sumbawa","pos",NA,NA,NA,NA
+"SWQ_363","swq_363","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severely degraded","sumbawa","pos",NA,NA,NA,NA
+"SWQ_364","swq_364","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_365","swq_365","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_368","swq_368","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_370","swq_370","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_371","swq_371","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_374","swq_374","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severely degraded","sumbawa","pos",NA,NA,NA,NA
+"SWQ_375","swq_375","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_376","swq_376","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_380","swq_380","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_381","swq_381","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_382","swq_382","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_383","swq_383","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_387","swq_387","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_394","swq_394","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severely degraded","sumbawa","pos",NA,NA,NA,NA
+"SWQ_395","swq_395","45376.0","yes","s","pos","green colony","need confirmation","severely degraded","sumbawa","pos",NA,NA,NA,NA
+"SWQ_396","swq_396","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_397","swq_397","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severely degraded","sumbawa","pos",NA,NA,NA,NA
+"SWQ_400","swq_400","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_405","swq_405","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severely degraded","sumbawa","pos",NA,NA,NA,NA
+"SWQ_406","swq_406","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_407","swq_407","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_408","swq_408","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_409","swq_409","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_410","swq_410","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severely degraded","sumbawa","pos",NA,NA,NA,NA
+"SWQ_414","swq_414","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","(not yet extracted) ekstraksi next batch","sumbawa","pos",NA,NA,NA,NA
+"SWQ_415","swq_415","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_422","swq_422","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severely degraded","sumbawa","pos",NA,NA,NA,NA
+"SWQ_423","swq_423","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_425","swq_425","45376.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_429","swq_429","45354.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_431","swq_431","45354.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_432","swq_432","45354.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_437","swq_437","45354.0","yes","s","pos","green colony","ready for shipment (at mrin)","not yet extracted","sumbawa","pos",NA,NA,NA,NA
+"SWQ_440","swq_440","45354.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_441","swq_441","45354.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_443","swq_443","45354.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
+"SWQ_449","swq_449","45354.0","yes","s","pos","green colony","ready for shipment (at mrin)","severe rna contamination/extra fragments","sumbawa","pos",NA,NA,NA,NA
